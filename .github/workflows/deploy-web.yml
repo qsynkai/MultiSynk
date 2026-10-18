@@ -28,6 +28,9 @@ jobs:
       - name: Create empty .env
         run: touch .env
 
+      - name: Setup SQLite for web
+        run: dart run sqflite_common_ffi_web:setup
+
       - name: Build web
         run: |
           flutter build web --release \
