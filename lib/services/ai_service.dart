@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import '../config/app_config.dart';
 import '../models/task.dart';
 import '../models/shopping_item.dart';
 
 class AiService {
-  static String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
+  static String get _apiKey => AppConfig.openaiApiKey;
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-4.1';
 
