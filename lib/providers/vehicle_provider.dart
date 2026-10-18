@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_helper.dart';
 import '../models/vehicle.dart';
@@ -5,12 +6,20 @@ import '../models/transaction.dart';
 import 'package:uuid/uuid.dart';
 
 class VehicleNotifier extends StateNotifier<List<Vehicle>> {
+  String? loadError;
+
   VehicleNotifier() : super([]) {
     load();
   }
 
   Future<void> load() async {
-    state = await DatabaseHelper.instance.getVehicles();
+    try {
+      state = await DatabaseHelper.instance.getVehicles();
+      loadError = null;
+    } catch (e) {
+      loadError = e.toString();
+      debugPrint('[VehicleProvider] load failed: $e');
+    }
   }
 
   Future<void> addMaintenanceItem(String vehicleId, MaintenanceItem item) async {

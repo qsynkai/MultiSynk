@@ -41,9 +41,27 @@ class VehiclesScreen extends ConsumerWidget {
               ),
             ),
             if (vehicles.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 child: Center(
-                  child: Text('Carregando veículos...', style: TextStyle(color: AppColors.textSecondary)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        ref.read(vehicleProvider.notifier).loadError != null
+                            ? 'Erro ao carregar: ${ref.read(vehicleProvider.notifier).loadError}'
+                            : 'Carregando veículos...',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (ref.read(vehicleProvider.notifier).loadError != null) ...[
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => ref.read(vehicleProvider.notifier).load(),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               )
             else

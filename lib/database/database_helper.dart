@@ -95,11 +95,19 @@ class DatabaseHelper {
     final options = OpenDatabaseOptions(version: schemaVersion, onCreate: _onCreate, onUpgrade: _onUpgrade);
     if (_factory != null) return _factory.openDatabase(_path!, options: options);
     if (kIsWeb) {
-      // Use the no-worker factory: runs SQLite on the main thread via WASM.
-      // The SharedWorker factory needs COOP/COEP cross-origin isolation headers
-      // that not all browser contexts support (embedded webviews, some proxies).
-      // For a personal finance app the main-thread approach is perfectly fine.
-      return databaseFactoryFfiWebNoWebWorker.openDatabase('multisynk.db', options: options);
+      try {
+        return await databaseFactoryFfiWebNoWebWorker.openDatabase('multisynk.db', options: options);
+      } catch (e, st) {
+        debugPrint('[DB-WEB] NoWebWorker factory failed: $e');
+        debugPrint('[DB-WEB] Stack: $st');
+        try {
+          return await databaseFactoryFfiWeb.openDatabase('multisynk.db', options: options);
+        } catch (e2, st2) {
+          debugPrint('[DB-WEB] SharedWorker factory also failed: $e2');
+          debugPrint('[DB-WEB] Stack: $st2');
+          rethrow;
+        }
+      }
     }
     return databaseFactory.openDatabase(join(await getDatabasesPath(), 'multisynk.db'), options: options);
   }
