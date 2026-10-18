@@ -180,14 +180,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final combinedWeeklyBudget = (combinedAvailable / wl) - finance.weekExpenses;
 
     if (!finance.isLoading && !fiorino.isLoading) {
-      WidgetService.update(
-        weeklyBudget: combinedWeeklyBudget,
-        receivables: finance.pendingReceivables,
-        monthExpenses: finance.monthExpenses,
-        pendingFixed: pendingFixed,
-        fiorinoToday: fiorino.todayEntry?.amount,
-        topTasks: tasks.pendingTasks.take(3).map((t) => t.title).toList(),
-      );
+      final topTasks = tasks.pendingTasks.take(3).map((t) => t.title).toList();
+      WidgetsBinding.instance.addPostFrameCallback((_) => WidgetService.update(
+            weeklyBudget: combinedWeeklyBudget,
+            receivables: finance.pendingReceivables,
+            monthExpenses: finance.monthExpenses,
+            pendingFixed: pendingFixed,
+            fiorinoToday: fiorino.todayEntry?.amount,
+            topTasks: topTasks,
+          ));
     }
 
     return Scaffold(

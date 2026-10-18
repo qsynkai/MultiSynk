@@ -1,9 +1,12 @@
 package com.focusbudget.app
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
@@ -15,11 +18,35 @@ import java.util.Locale
 class BudgetWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+            // This runs inside the app process; a failure here must never take the app down.
+            try {
+                updateAppWidget(context, appWidgetManager, appWidgetId)
+            } catch (e: Exception) {
+                Log.e("BudgetWidget", "Widget update failed", e)
+            }
         }
     }
 
     companion object {
+        private val ROUTES = listOf(
+            "multisynk://tab/0", "multisynk://tab/1", "multisynk://tab/4", "multisynk://fiorino",
+        )
+
+        // Plain PendingIntent instead of HomeWidgetLaunchIntent, which sets a background-activity
+        // start option that newer Android versions reject. Action/data still match what the
+        // home_widget plugin reads in Dart.
+        private fun launchIntent(context: Context, uri: String): PendingIntent {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                action = HomeWidgetLaunchIntent.HOME_WIDGET_LAUNCH_ACTION
+                data = Uri.parse(uri)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            return PendingIntent.getActivity(
+                context, ROUTES.indexOf(uri) + 1, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val data = HomeWidgetPlugin.getData(context)
             fun str(key: String, default: String = "") = data.getString(key, default) ?: default
@@ -62,8 +89,7 @@ class BudgetWidget : AppWidgetProvider() {
             val updated = str("updated_at")
             views.setTextViewText(R.id.widget_updated, if (updated.isEmpty()) "" else "Atualizado às $updated")
 
-            fun open(uri: String) =
-                HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java, Uri.parse(uri))
+            fun open(uri: String) = launchIntent(context, uri)
 
             views.setOnClickPendingIntent(R.id.widget_root, open("multisynk://tab/0"))
             views.setOnClickPendingIntent(R.id.widget_tasks_box, open("multisynk://tab/4"))
