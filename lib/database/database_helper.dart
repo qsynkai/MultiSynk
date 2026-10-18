@@ -97,16 +97,9 @@ class DatabaseHelper {
     if (kIsWeb) {
       try {
         return await databaseFactoryFfiWebNoWebWorker.openDatabase('multisynk.db', options: options);
-      } catch (e, st) {
-        debugPrint('[DB-WEB] NoWebWorker factory failed: $e');
-        debugPrint('[DB-WEB] Stack: $st');
-        try {
-          return await databaseFactoryFfiWeb.openDatabase('multisynk.db', options: options);
-        } catch (e2, st2) {
-          debugPrint('[DB-WEB] SharedWorker factory also failed: $e2');
-          debugPrint('[DB-WEB] Stack: $st2');
-          rethrow;
-        }
+      } catch (e) {
+        debugPrint('[DB-WEB] NoWebWorker failed: $e — trying SharedWorker');
+        return await databaseFactoryFfiWeb.openDatabase('multisynk.db', options: options);
       }
     }
     return databaseFactory.openDatabase(join(await getDatabasesPath(), 'multisynk.db'), options: options);
