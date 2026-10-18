@@ -8,7 +8,6 @@ class AppConfig {
   // Valores injetados via --dart-define no build web
   static const _supabaseUrlDef = String.fromEnvironment('SUPABASE_URL');
   static const _supabaseKeyDef = String.fromEnvironment('SUPABASE_ANON_KEY');
-  static const _openaiKeyDef = String.fromEnvironment('OPENAI_API_KEY');
 
   static String get supabaseUrl =>
       kIsWeb ? _supabaseUrlDef : (dotenv.env['SUPABASE_URL'] ?? '');
@@ -16,6 +15,7 @@ class AppConfig {
   static String get supabaseAnonKey =>
       kIsWeb ? _supabaseKeyDef : (dotenv.env['SUPABASE_ANON_KEY'] ?? '');
 
+  // Never embed the OpenAI key in the web bundle: compiled JS is publicly readable.
   static String get openaiApiKey =>
-      kIsWeb ? _openaiKeyDef : (dotenv.env['OPENAI_API_KEY'] ?? '');
+      kIsWeb ? '' : (dotenv.env['OPENAI_API_KEY'] ?? '');
 }
