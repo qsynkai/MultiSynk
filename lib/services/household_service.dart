@@ -13,7 +13,7 @@ class Household {
         id: m['id'] as String,
         name: m['name'] as String,
         inviteCode: m['invite_code'] as String,
-        memberCount: (m['member_count'] as num).toInt(),
+        memberCount: (m['member_count'] as num?)?.toInt() ?? 1,
       );
 }
 
