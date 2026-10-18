@@ -45,6 +45,14 @@ jobs:
           {
             "version": 3,
             "routes": [
+              {
+                "src": "/(.*)",
+                "headers": {
+                  "Cross-Origin-Opener-Policy": "same-origin",
+                  "Cross-Origin-Embedder-Policy": "require-corp"
+                },
+                "continue": true
+              },
               { "handle": "filesystem" },
               { "src": "/(.*)", "dest": "/index.html" }
             ]
