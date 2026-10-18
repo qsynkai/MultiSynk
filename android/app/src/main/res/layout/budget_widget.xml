@@ -5,9 +5,9 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_background"
-    android:padding="18dp">
+    android:padding="16dp">
 
-    <!-- Header: app name + data -->
+    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="MultiSynk"
-            android:textColor="#FF6C5CE7"
+            android:textColor="#FFA78BFA"
             android:textSize="13sp"
             android:textStyle="bold"
             android:letterSpacing="0.05" />
@@ -29,44 +29,51 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="—"
-            android:textColor="#66FFFFFF"
+            android:textColor="#88FFFFFF"
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Divider -->
-    <View
+    <!-- Hero: posso gastar -->
+    <LinearLayout
+        android:id="@+id/widget_hero"
         android:layout_width="match_parent"
-        android:layout_height="0.5dp"
-        android:background="#22FFFFFF"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/widget_hero_bg"
         android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp" />
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
 
-    <!-- Label -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="POSSO GASTAR ESTA SEMANA"
-        android:textColor="#88FFFFFF"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.12" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="POSSO GASTAR ESTA SEMANA"
+            android:textColor="#CCFFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12" />
 
-    <!-- BIG budget value -->
-    <TextView
-        android:id="@+id/widget_budget"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="R$ 0,00"
-        android:textColor="#FFFFFF"
-        android:textSize="38sp"
-        android:textStyle="bold"
-        android:layout_marginTop="2dp" />
+        <TextView
+            android:id="@+id/widget_budget"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="R$ 0,00"
+            android:textColor="#FFFFFF"
+            android:textSize="36sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
 
-    <!-- Spacer -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        <TextView
+            android:id="@+id/widget_fixed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAFFFFFF"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <!-- Stats row -->
     <LinearLayout
@@ -74,101 +81,154 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@drawable/widget_stats_bg"
-        android:padding="12dp">
+        android:layout_marginTop="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
-        <!-- Saldo -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SALDO"
-                android:textColor="#55FFFFFF"
+                android:text="A RECEBER"
+                android:textColor="#77FFFFFF"
                 android:textSize="9sp"
-                android:letterSpacing="0.1"
                 android:textStyle="bold" />
-
             <TextView
-                android:id="@+id/widget_income"
+                android:id="@+id/widget_receivables"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R$ 0,00"
-                android:textColor="#00B894"
-                android:textSize="14sp"
+                android:textColor="#34D399"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:layout_marginTop="2dp" />
+                android:maxLines="1" />
         </LinearLayout>
 
         <View
             android:layout_width="0.5dp"
-            android:layout_height="32dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center_vertical"
             android:background="#33FFFFFF" />
 
-        <!-- Gastos -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="GASTOS"
-                android:textColor="#55FFFFFF"
+                android:text="GASTOS MÊS"
+                android:textColor="#77FFFFFF"
                 android:textSize="9sp"
-                android:letterSpacing="0.1"
                 android:textStyle="bold" />
-
             <TextView
                 android:id="@+id/widget_expenses"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R$ 0,00"
-                android:textColor="#E17055"
-                android:textSize="14sp"
+                android:textColor="#F87171"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:layout_marginTop="2dp" />
+                android:maxLines="1" />
         </LinearLayout>
 
         <View
             android:layout_width="0.5dp"
-            android:layout_height="32dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center_vertical"
             android:background="#33FFFFFF" />
 
-        <!-- Fiorino hoje -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="FIORINO HOJE"
-                android:textColor="#55FFFFFF"
+                android:textColor="#77FFFFFF"
                 android:textSize="9sp"
-                android:letterSpacing="0.1"
                 android:textStyle="bold" />
-
             <TextView
                 android:id="@+id/widget_fiorino"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="—"
-                android:textColor="#00CEC9"
-                android:textSize="14sp"
+                android:textColor="#22D3EE"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:layout_marginTop="2dp" />
+                android:maxLines="1" />
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Prioridades -->
+    <LinearLayout
+        android:id="@+id/widget_tasks_box"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PRIORIDADES DE HOJE"
+            android:textColor="#88FFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+
+        <TextView
+            android:id="@+id/widget_task_1"
+            style="@style/WidgetTask"
+            android:textColor="#FFFFFFFF" />
+        <TextView
+            android:id="@+id/widget_task_2"
+            style="@style/WidgetTask" />
+        <TextView
+            android:id="@+id/widget_task_3"
+            style="@style/WidgetTask" />
+    </LinearLayout>
+
+    <!-- Quick actions -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
+
+        <TextView
+            android:id="@+id/widget_btn_expense"
+            style="@style/WidgetButton"
+            android:text="+ Gasto" />
+        <TextView
+            android:id="@+id/widget_btn_fiorino"
+            style="@style/WidgetButton"
+            android:layout_marginStart="6dp"
+            android:text="Fiorino" />
+        <TextView
+            android:id="@+id/widget_btn_tasks"
+            style="@style/WidgetButton"
+            android:layout_marginStart="6dp"
+            android:text="Tarefas" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_updated"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="4dp"
+        android:textColor="#55FFFFFF"
+        android:textSize="9sp" />
 </LinearLayout>

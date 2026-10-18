@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_helper.dart';
 import '../models/fiorino_entry.dart';
-import '../services/widget_service.dart';
 
 class FiorinoState {
   final List<FiorinoEntry> entries;
@@ -81,12 +80,6 @@ class FiorinoNotifier extends StateNotifier<FiorinoState> {
     final entries = await DatabaseHelper.instance.getFiorinoEntries();
     final config = await DatabaseHelper.instance.getFiorinoConfig();
     state = FiorinoState(entries: entries, config: config);
-    WidgetService.update(
-      weeklyBudget: 0,
-      totalIncome: 0,
-      totalExpenses: 0,
-      fiorinoToday: state.todayEntry?.amount,
-    );
   }
 
   Future<void> addEntry(double amount, {String? notes, DateTime? date}) async {

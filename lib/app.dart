@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:home_widget/home_widget.dart';
 import 'theme/app_theme.dart';
+import 'screens/fiorino_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/finance_screen.dart';
 import 'screens/vehicles_screen.dart';
@@ -17,6 +21,35 @@ class MultiSynkApp extends StatefulWidget {
 
 class _MultiSynkAppState extends State<MultiSynkApp> {
   int _currentIndex = 0;
+  StreamSubscription<Uri?>? _widgetSub;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) return;
+    HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetUri);
+    _widgetSub = HomeWidget.widgetClicked.listen(_handleWidgetUri);
+  }
+
+  @override
+  void dispose() {
+    _widgetSub?.cancel();
+    super.dispose();
+  }
+
+  // multisynk://tab/<index> switches tab; multisynk://fiorino opens the Fiorino entry screen.
+  void _handleWidgetUri(Uri? uri) {
+    if (uri == null || !mounted) return;
+    if (uri.host == 'tab') {
+      final index = int.tryParse(uri.pathSegments.firstOrNull ?? '');
+      if (index != null && index >= 0 && index < _screens.length) {
+        Navigator.of(context).popUntil((r) => r.isFirst);
+        setState(() => _currentIndex = index);
+      }
+    } else if (uri.host == 'fiorino') {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FiorinoScreen()));
+    }
+  }
 
   final _screens = const [
     HomeScreen(),

@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_helper.dart';
 import '../models/transaction.dart';
 import '../models/receivable.dart';
-import '../services/widget_service.dart';
 
 class FinanceState {
   final List<Transaction> transactions;
@@ -94,11 +93,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     final transactions = await DatabaseHelper.instance.getTransactions();
     final receivables = await DatabaseHelper.instance.getReceivables();
     state = FinanceState(transactions: transactions, receivables: receivables);
-    WidgetService.update(
-      weeklyBudget: state.weeklyBudget,
-      totalIncome:  state.totalIncome,
-      totalExpenses: state.totalExpenses,
-    );
   }
 
   Future<void> addTransaction(Transaction t) async {

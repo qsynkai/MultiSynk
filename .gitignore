@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+supabase/.temp/
+release/
 
 # Flutter/Dart
 .dart_tool/

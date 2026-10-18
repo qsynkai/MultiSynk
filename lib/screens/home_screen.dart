@@ -16,6 +16,7 @@ import '../models/payment_card.dart';
 import '../services/ai_service.dart';
 import '../services/supabase_service.dart';
 import '../services/sync_service.dart';
+import '../services/widget_service.dart';
 import 'auth_screen.dart';
 import 'fiorino_screen.dart';
 import 'studio_screen.dart';
@@ -177,6 +178,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final combinedAvailable = combinedMonthIncome + finance.pendingReceivables - combinedMonthExpenses - pendingFixed;
     final wl = finance.weeksUntilMonthEnd;
     final combinedWeeklyBudget = (combinedAvailable / wl) - finance.weekExpenses;
+
+    if (!finance.isLoading && !fiorino.isLoading) {
+      WidgetService.update(
+        weeklyBudget: combinedWeeklyBudget,
+        receivables: finance.pendingReceivables,
+        monthExpenses: finance.monthExpenses,
+        pendingFixed: pendingFixed,
+        fiorinoToday: fiorino.todayEntry?.amount,
+        topTasks: tasks.pendingTasks.take(3).map((t) => t.title).toList(),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
