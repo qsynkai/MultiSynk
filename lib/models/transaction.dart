@@ -1,0 +1,94 @@
+enum TransactionType { income, expense }
+
+enum PaymentMethod { cash, pix, debit, credit }
+
+class Transaction {
+  final String id;
+  final String description;
+  final double amount;
+  final TransactionType type;
+  final DateTime date;
+  final String? category;
+  final String? vehicleId;
+  final PaymentMethod? paymentMethod;
+  final String? cardId;
+  final int installments;
+  final int installmentNumber;
+  final String? installmentGroupId;
+
+  const Transaction({
+    required this.id,
+    required this.description,
+    required this.amount,
+    required this.type,
+    required this.date,
+    this.category,
+    this.vehicleId,
+    this.paymentMethod,
+    this.cardId,
+    this.installments = 1,
+    this.installmentNumber = 1,
+    this.installmentGroupId,
+  });
+
+  bool get isInstallment => installments > 1;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'description': description,
+    'amount': amount,
+    'type': type.name,
+    'date': date.toIso8601String(),
+    'category': category,
+    'vehicle_id': vehicleId,
+    'payment_method': paymentMethod?.name,
+    'card_id': cardId,
+    'installments': installments,
+    'installment_number': installmentNumber,
+    'installment_group_id': installmentGroupId,
+  };
+
+  factory Transaction.fromMap(Map<String, dynamic> map) => Transaction(
+    id: map['id'],
+    description: map['description'],
+    amount: (map['amount'] as num).toDouble(),
+    type: TransactionType.values.byName(map['type']),
+    date: DateTime.parse(map['date']),
+    category: map['category'],
+    vehicleId: map['vehicle_id'],
+    paymentMethod: map['payment_method'] != null
+        ? PaymentMethod.values.byName(map['payment_method'])
+        : null,
+    cardId: map['card_id'],
+    installments: map['installments'] as int? ?? 1,
+    installmentNumber: map['installment_number'] as int? ?? 1,
+    installmentGroupId: map['installment_group_id'],
+  );
+
+  Transaction copyWith({
+    String? description,
+    double? amount,
+    TransactionType? type,
+    DateTime? date,
+    String? category,
+    String? vehicleId,
+    PaymentMethod? paymentMethod,
+    String? cardId,
+    int? installments,
+    int? installmentNumber,
+    String? installmentGroupId,
+  }) => Transaction(
+    id: id,
+    description: description ?? this.description,
+    amount: amount ?? this.amount,
+    type: type ?? this.type,
+    date: date ?? this.date,
+    category: category ?? this.category,
+    vehicleId: vehicleId ?? this.vehicleId,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
+    cardId: cardId ?? this.cardId,
+    installments: installments ?? this.installments,
+    installmentNumber: installmentNumber ?? this.installmentNumber,
+    installmentGroupId: installmentGroupId ?? this.installmentGroupId,
+  );
+}

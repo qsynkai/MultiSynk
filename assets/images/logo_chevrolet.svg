@@ -1,0 +1,26 @@
+<svg viewBox="0 0 240 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Chevrolet Bowtie -->
+  <!-- Outer glow -->
+  <path d="M 8,18 L 88,18 L 88,36 L 152,36 L 152,18 L 232,18 L 232,82 L 152,82 L 152,64 L 88,64 L 88,82 L 8,82 Z"
+        fill="#C9A227" opacity="0.25" transform="translate(0,1)"/>
+  <!-- Main gold bowtie -->
+  <path d="M 8,18 L 88,18 L 88,36 L 152,36 L 152,18 L 232,18 L 232,82 L 152,82 L 152,64 L 88,64 L 88,82 L 8,82 Z"
+        fill="url(#goldGrad)"/>
+  <!-- Inner highlight -->
+  <path d="M 12,22 L 84,22 L 84,36 L 88,36 L 88,22 L 148,22 L 148,38 L 152,38 L 152,22 L 228,22 L 228,36 L 156,36 L 156,78 L 228,78 L 228,44 L 232,44"
+        fill="none" stroke="#F5D060" stroke-width="1" opacity="0.5"/>
+  <!-- Bowtie inner bevel top -->
+  <path d="M 10,20 L 86,20 L 86,36 L 154,36 L 154,20 L 230,20 L 230,24 L 158,24 L 158,40 L 82,40 L 82,24 L 10,24 Z"
+        fill="#F0D050" opacity="0.3"/>
+  <!-- Word mark -->
+  <text x="120" y="60" text-anchor="middle" font-family="Arial,sans-serif" font-size="11"
+        font-weight="bold" fill="#8B6914" letter-spacing="3" opacity="0.6">CHEVROLET</text>
+
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#F0D050"/>
+      <stop offset="40%"  stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#A07818"/>
+    </linearGradient>
+  </defs>
+</svg>

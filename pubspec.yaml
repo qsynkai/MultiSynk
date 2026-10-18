@@ -1,0 +1,57 @@
+name: multisynk
+description: Controle financeiro visual para mente ativa
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Estado
+  flutter_riverpod: ^2.5.1
+
+  # Banco de dados local
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+
+  # Banco de dados remoto
+  supabase_flutter: ^2.8.4
+  connectivity_plus: ^6.1.4
+
+  # SQLite no web (WASM)
+  sqflite_common_ffi_web: ^0.4.5+2
+
+  # Widget Android (tela inicial)
+  home_widget: ^0.6.0
+
+  # HTTP para OpenAI API
+  http: ^1.2.1
+
+  # Variáveis de ambiente (.env)
+  flutter_dotenv: ^5.2.1
+
+  # UI
+  google_fonts: ^6.2.1
+  fl_chart: ^0.68.0
+
+  # SVG rendering
+  flutter_svg: ^2.0.10+1
+
+  # Utils
+  intl: ^0.19.0
+  shared_preferences: ^2.3.2
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - .env

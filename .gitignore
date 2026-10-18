@@ -1,0 +1,29 @@
+# Chaves e segredos — NUNCA subir para o git
+.env
+.env.local
+.env.*.local
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+*.ipr
+*.iws
+.idea/
+*.log
+
+# Android
+android/local.properties
+android/.gradle/
+android/app/debug/
+android/app/release/
+android/key.properties
+*.jks
+*.keystore
+
+# macOS / Windows
+.DS_Store
+Thumbs.db

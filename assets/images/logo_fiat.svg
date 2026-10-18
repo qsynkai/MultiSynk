@@ -1,0 +1,40 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#1A2A6C"/>
+      <stop offset="50%"  stop-color="#B21F1F"/>
+      <stop offset="100%" stop-color="#1A2A6C"/>
+    </linearGradient>
+    <linearGradient id="goldRing" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#F0D050"/>
+      <stop offset="50%"  stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#A07818"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="40%" cy="35%" r="50%">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer gold ring -->
+  <circle cx="100" cy="100" r="96" fill="url(#goldRing)"/>
+  <!-- Inner dark circle -->
+  <circle cx="100" cy="100" r="86" fill="url(#bgGrad)"/>
+  <!-- Shine overlay -->
+  <circle cx="100" cy="100" r="86" fill="url(#sheen)"/>
+
+  <!-- FIAT text -->
+  <text x="100" y="118" text-anchor="middle"
+        font-family="Arial Black, Arial, sans-serif"
+        font-size="52" font-weight="900"
+        fill="url(#goldRing)"
+        letter-spacing="4">FIAT</text>
+
+  <!-- Thin inner gold ring -->
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#C9A227" stroke-width="1.5" opacity="0.6"/>
+  <!-- Tiny decorative dots top/bottom -->
+  <circle cx="100" cy="17" r="4" fill="#C9A227"/>
+  <circle cx="100" cy="183" r="4" fill="#C9A227"/>
+  <circle cx="17"  cy="100" r="4" fill="#C9A227"/>
+  <circle cx="183" cy="100" r="4" fill="#C9A227"/>
+</svg>
