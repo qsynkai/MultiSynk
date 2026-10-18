@@ -18,6 +18,15 @@
 -keepnames class kotlinx.coroutines.** { *; }
 -dontwarn kotlinx.coroutines.**
 
+# package:jni looks up Kotlin methods by exact JNI signature (e.g. shared_preferences
+# getAll(String, List, Continuation)), so the types in those signatures must keep their names.
+-keep class kotlin.coroutines.** { *; }
+-keep class kotlin.Result { *; }
+-keep class kotlin.Unit { *; }
+-keep class kotlin.jvm.functions.** { *; }
+-keep class com.github.dart_lang.jni.** { *; }
+-dontwarn com.github.dart_lang.jni.**
+
 # Preserve annotations
 -keepattributes *Annotation*
 -keepattributes Signature
