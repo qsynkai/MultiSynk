@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:sqflite/sqflite.dart' hide Transaction;
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:path/path.dart';
-import 'dart:async';
 import '../models/map_utils.dart';
 import '../models/transaction.dart';
 import '../models/vehicle.dart';
@@ -96,15 +95,11 @@ class DatabaseHelper {
     final options = OpenDatabaseOptions(version: schemaVersion, onCreate: _onCreate, onUpgrade: _onUpgrade);
     if (_factory != null) return _factory.openDatabase(_path!, options: options);
     if (kIsWeb) {
-      // Try SharedWorker factory first (needs COOP/COEP headers for SharedArrayBuffer).
-      // Fall back to no-worker factory that runs on the main thread.
-      try {
-        return await databaseFactoryFfiWeb
-            .openDatabase('multisynk.db', options: options)
-            .timeout(const Duration(seconds: 5));
-      } catch (_) {
-        return databaseFactoryFfiWebNoWebWorker.openDatabase('multisynk.db', options: options);
-      }
+      // Use the no-worker factory: runs SQLite on the main thread via WASM.
+      // The SharedWorker factory needs COOP/COEP cross-origin isolation headers
+      // that not all browser contexts support (embedded webviews, some proxies).
+      // For a personal finance app the main-thread approach is perfectly fine.
+      return databaseFactoryFfiWebNoWebWorker.openDatabase('multisynk.db', options: options);
     }
     return databaseFactory.openDatabase(join(await getDatabasesPath(), 'multisynk.db'), options: options);
   }
