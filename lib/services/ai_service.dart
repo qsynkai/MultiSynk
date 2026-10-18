@@ -4,15 +4,39 @@ import 'package:intl/intl.dart';
 import '../config/app_config.dart';
 import '../models/task.dart';
 import '../models/shopping_item.dart';
+import 'supabase_service.dart';
 
 class AiService {
   static String get _apiKey => AppConfig.openaiApiKey;
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-4.1';
 
+  static bool get _available => SupabaseService.isSignedIn || _apiKey.isNotEmpty;
+
+  /// Prefers the Supabase `ai-proxy` function (key stays server-side);
+  /// falls back to a direct call only when a local key exists and the user is signed out.
+  static Future<Map<String, dynamic>?> _chat(Map<String, dynamic> body) async {
+    if (SupabaseService.isSignedIn) {
+      final res = await SupabaseService.client.functions.invoke('ai-proxy', body: body);
+      final data = res.data;
+      return data is Map<String, dynamic> ? data : jsonDecode(data as String);
+    }
+    if (_apiKey.isEmpty) return null;
+    final response = await http.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'Authorization': 'Bearer $_apiKey',
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode != 200) return null;
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
   static Future<List<Task>> analyzePriorities(List<Task> tasks) async {
     if (tasks.isEmpty) return tasks;
-    if (_apiKey.isEmpty) return tasks;
+    if (!_available) return tasks;
 
     final taskList = tasks
         .map((t) => '- ID:${t.id} | ${t.title}'
@@ -21,13 +45,7 @@ class AiService {
         .join('\n');
 
     try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
+      final data = await _chat({
           'model': _model,
           'temperature': 0.3,
           'max_tokens': 1024,
@@ -56,11 +74,9 @@ Responda neste formato JSON:
 Foque no que a pessoa NÃO pode esquecer. Seja direto e objetivo.''',
             },
           ],
-        }),
-      );
+      });
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data != null) {
         final content = data['choices'][0]['message']['content'] as String;
 
         final cleanContent = content
@@ -101,7 +117,7 @@ Foque no que a pessoa NÃO pode esquecer. Seja direto e objetivo.''',
     required List<Map<String, dynamic>> activeFixed,
     required double cardTotal,
   }) async {
-    if (_apiKey.isEmpty) return 'Chave de API não configurada.';
+    if (!_available) return 'Entre na sua conta (ícone de nuvem) para usar a IA.';
 
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final now = DateTime.now();
@@ -145,13 +161,7 @@ $fixedLines
 ''';
 
     try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-        body: jsonEncode({
+      final data = await _chat({
           'model': _model,
           'temperature': 0.4,
           'max_tokens': 600,
@@ -170,11 +180,9 @@ $fixedLines
               'content': 'Analise minha situação financeira atual:\n\n$context',
             },
           ],
-        }),
-      );
+      });
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data != null) {
         return data['choices'][0]['message']['content'] as String;
       }
       return 'Não foi possível gerar a análise. Tente novamente.';
@@ -185,7 +193,7 @@ $fixedLines
 
   static Future<List<ShoppingItem>> analyzeShoppingPriorities(List<ShoppingItem> items) async {
     if (items.isEmpty) return items;
-    if (_apiKey.isEmpty) return items;
+    if (!_available) return items;
 
     final list = items
         .map((i) => '- ID:${i.id} | ${i.description}'
@@ -195,13 +203,7 @@ $fixedLines
         .join('\n');
 
     try {
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
+      final data = await _chat({
           'model': _model,
           'temperature': 0.3,
           'max_tokens': 1024,
@@ -229,11 +231,9 @@ Responda neste formato JSON:
 }''',
             },
           ],
-        }),
-      );
+      });
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (data != null) {
         final content = data['choices'][0]['message']['content'] as String;
         final cleanContent = content.replaceAll('```json', '').replaceAll('```', '').trim();
         final jsonData = jsonDecode(cleanContent);
