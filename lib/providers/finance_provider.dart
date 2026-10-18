@@ -44,34 +44,6 @@ class FinanceState {
                     (t.vehicleId == null || t.vehicleId == 'meriva-001'))
       .fold(0, (sum, t) => sum + t.amount);
 
-  // Despesas desta semana (segunda a hoje)
-  double get weekExpenses {
-    final now = DateTime.now();
-    final weekStart = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1));
-    return transactions
-        .where((t) =>
-            t.type == TransactionType.expense &&
-            !t.date.isBefore(weekStart) &&
-            (t.vehicleId == null || t.vehicleId == 'meriva-001'))
-        .fold(0.0, (sum, t) => sum + t.amount);
-  }
-
-  int get weeksUntilMonthEnd {
-    final now = DateTime.now();
-    final endOfMonth = DateTime(now.year, now.month + 1, 0);
-    final days = endOfMonth.difference(now).inDays;
-    return (days / 7).ceil().clamp(1, 5);
-  }
-
-  // weeklyBudget agora é calculado no HomeScreen integrando Fiorino + Studio.
-  // Este getter permanece para compatibilidade mas usa apenas Finance.
-  double get weeklyBudget {
-    final available = monthIncome + pendingReceivables - monthExpenses;
-    final wl = weeksUntilMonthEnd;
-    return (available / wl) - weekExpenses;
-  }
-
   FinanceState copyWith({
     List<Transaction>? transactions,
     List<Receivable>? receivables,
@@ -97,6 +69,13 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
 
   Future<void> addTransaction(Transaction t) async {
     await DatabaseHelper.instance.insertTransaction(t);
+    await load();
+  }
+
+  Future<void> addTransactions(List<Transaction> list) async {
+    for (final t in list) {
+      await DatabaseHelper.instance.insertTransaction(t);
+    }
     await load();
   }
 

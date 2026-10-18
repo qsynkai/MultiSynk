@@ -2,7 +2,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
+import 'providers/finance_provider.dart';
+import 'providers/fiorino_provider.dart';
+import 'providers/fixed_expense_provider.dart';
+import 'providers/payment_card_provider.dart';
+import 'providers/shopping_provider.dart';
+import 'providers/studio_provider.dart';
+import 'providers/task_provider.dart';
+import 'providers/vehicle_provider.dart';
+import 'services/sync_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/fiorino_screen.dart';
 import 'screens/home_screen.dart';
@@ -12,20 +22,25 @@ import 'screens/tasks_screen.dart';
 import 'screens/studio_screen.dart';
 import 'screens/cards_screen.dart';
 
-class MultiSynkApp extends StatefulWidget {
+class MultiSynkApp extends ConsumerStatefulWidget {
   const MultiSynkApp({super.key});
 
   @override
-  State<MultiSynkApp> createState() => _MultiSynkAppState();
+  ConsumerState<MultiSynkApp> createState() => _MultiSynkAppState();
 }
 
-class _MultiSynkAppState extends State<MultiSynkApp> {
+class _MultiSynkAppState extends ConsumerState<MultiSynkApp> with WidgetsBindingObserver {
   int _currentIndex = 0;
   StreamSubscription<Uri?>? _widgetSub;
+  Timer? _syncTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    SyncService.dataVersion.addListener(_reloadAll);
+    _startSyncTimer();
+    SyncService.syncAll();
     if (kIsWeb) return;
     HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetUri);
     _widgetSub = HomeWidget.widgetClicked.listen(_handleWidgetUri);
@@ -33,8 +48,38 @@ class _MultiSynkAppState extends State<MultiSynkApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    SyncService.dataVersion.removeListener(_reloadAll);
+    _syncTimer?.cancel();
     _widgetSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SyncService.syncAll();
+      _startSyncTimer();
+    } else if (state == AppLifecycleState.paused) {
+      _syncTimer?.cancel();
+    }
+  }
+
+  // Pulls the partner's changes while the app is open.
+  void _startSyncTimer() {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 60), (_) => SyncService.syncAll());
+  }
+
+  void _reloadAll() {
+    ref.read(financeProvider.notifier).load();
+    ref.read(taskProvider.notifier).load();
+    ref.read(fiorinoProvider.notifier).load();
+    ref.read(studioProvider.notifier).load();
+    ref.read(fixedExpenseProvider.notifier).load();
+    ref.read(paymentCardProvider.notifier).load();
+    ref.read(vehicleProvider.notifier).load();
+    ref.read(shoppingProvider.notifier).load();
   }
 
   // multisynk://tab/<index> switches tab; multisynk://fiorino opens the Fiorino entry screen.

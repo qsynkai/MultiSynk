@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/studio_entry.dart';
 import '../models/studio_config.dart';
@@ -105,6 +106,7 @@ class StudioNotifier extends StateNotifier<StudioState> {
   }
 
   Future<void> addEntry({
+    String? id,
     required double amount,
     required String type,
     required String description,
@@ -113,7 +115,7 @@ class StudioNotifier extends StateNotifier<StudioState> {
     String? notes,
   }) async {
     final entry = StudioEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: id ?? const Uuid().v4(),
       amount: amount,
       type: type,
       description: description,

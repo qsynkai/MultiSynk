@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 class FixedExpense {
   final String id;
   final String description;
@@ -30,11 +32,11 @@ class FixedExpense {
   factory FixedExpense.fromMap(Map<String, dynamic> map) => FixedExpense(
     id: map['id'] as String,
     description: map['description'] as String,
-    amount: (map['amount'] as num).toDouble(),
+    amount: asDouble(map['amount']),
     category: map['category'] as String? ?? '',
     scope: map['scope'] as String? ?? 'personal',
-    isActive: (map['is_active'] as int? ?? 1) == 1,
-    dueDay: map['due_day'] as int? ?? 10,
+    isActive: asBool(map['is_active'], true),
+    dueDay: asInt(map['due_day'], 10),
   );
 
   FixedExpense copyWith({bool? isActive}) => FixedExpense(

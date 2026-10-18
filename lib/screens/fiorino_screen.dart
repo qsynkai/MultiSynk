@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../providers/fiorino_provider.dart';
 import '../models/fiorino_entry.dart';
+import '../logic/money.dart';
 
 class FiorinoScreen extends ConsumerStatefulWidget {
   const FiorinoScreen({super.key});
@@ -518,7 +519,7 @@ class _DailyEntryCard extends ConsumerWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
-          final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.')) ?? 0;
+          final amount = parseMoney(amountCtrl.text) ?? 0;
           final safety = amount * state.config.safetyPercent;
           final maintenance = amount * state.config.maintenancePercent;
           final available = amount * state.config.availablePercent;

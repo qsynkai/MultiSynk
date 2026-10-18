@@ -17,7 +17,9 @@ import '../services/ai_service.dart';
 import '../services/supabase_service.dart';
 import '../services/sync_service.dart';
 import '../services/widget_service.dart';
+import '../logic/budget.dart';
 import 'auth_screen.dart';
+import 'household_screen.dart';
 import 'fiorino_screen.dart';
 import 'studio_screen.dart';
 import 'cards_screen.dart';
@@ -37,23 +39,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _handleCloudSync() async {
-    if (!SupabaseService.isSignedIn) {
-      final result = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(builder: (_) => const AuthScreen()),
-      );
-      if (result == true) setState(() {});
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sincronizando dados...')),
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SupabaseService.isSignedIn ? const HouseholdScreen() : const AuthScreen(),
+      ),
     );
-    await SyncService.syncAll();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dados sincronizados!')),
-      );
-    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _checkMonthChange() async {
@@ -126,8 +118,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final fixedExpenses = ref.read(fixedExpenseProvider);
     final now = DateTime.now();
 
+    // Deterministic ids: applying the same month on two devices must not duplicate expenses.
     for (final fe in fixedExpenses.studioExpenses) {
       await ref.read(studioProvider.notifier).addEntry(
+        id: fixedExpenseTransactionId(fe.id, now),
         amount: fe.amount,
         type: 'expense',
         description: fe.description,
@@ -139,7 +133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     for (final fe in fixedExpenses.personalExpenses) {
       await ref.read(financeProvider.notifier).addTransaction(Transaction(
-        id: 'fe-${fe.id}-${now.year}-${now.month}',
+        id: fixedExpenseTransactionId(fe.id, now),
         description: fe.description,
         amount: fe.amount,
         type: TransactionType.expense,
@@ -159,25 +153,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final cardState = ref.watch(paymentCardProvider);
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
-    // Renda mensal combinada: Finance (pessoal) + Fiorino disponível + Prolabore studio
-    final combinedMonthIncome = finance.monthIncome
-        + fiorino.monthAvailable
-        + studio.monthProlabore;
-    final combinedMonthExpenses = finance.monthExpenses;
-
-    // Despesas fixas ainda não lançadas como transação este mês
-    final now = DateTime.now();
+    // Renda combinada: Finance (pessoal) + Fiorino disponível + pró-labore do Studio
+    final budget = computeBudget(
+      now: DateTime.now(),
+      transactions: finance.transactions,
+      receivables: finance.receivables,
+      personalFixed: fixedState.personalExpenses,
+      fiorinoMonthAvailable: fiorino.monthAvailable,
+      studioMonthProlabore: studio.monthProlabore,
+    );
+    final combinedMonthIncome = budget.monthIncome;
+    final combinedMonthExpenses = budget.monthExpenses;
+    final pendingFixed = budget.pendingFixed;
+    final wl = budget.weeksLeft;
+    final combinedWeeklyBudget = budget.weeklyBudget;
     final appliedFixedIds = finance.transactions
         .where((t) => t.id.startsWith('fe-'))
         .map((t) => t.id)
         .toSet();
-    final pendingFixed = fixedState.personalExpenses
-        .where((fe) => !appliedFixedIds.contains('fe-${fe.id}-${now.year}-${now.month}'))
-        .fold(0.0, (sum, fe) => sum + fe.amount);
-
-    final combinedAvailable = combinedMonthIncome + finance.pendingReceivables - combinedMonthExpenses - pendingFixed;
-    final wl = finance.weeksUntilMonthEnd;
-    final combinedWeeklyBudget = (combinedAvailable / wl) - finance.weekExpenses;
 
     if (!finance.isLoading && !fiorino.isLoading) {
       final topTasks = tasks.pendingTasks.take(3).map((t) => t.title).toList();
@@ -229,8 +222,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         fiorinoMonthAvailable: fiorino.monthAvailable,
                         studioMonthProlabore: studio.monthProlabore,
                         monthExpenses: combinedMonthExpenses,
-                        weekExpenses: finance.weekExpenses,
-                        pendingReceivables: finance.pendingReceivables,
+                        weekExpenses: budget.weekSpent,
+                        pendingReceivables: budget.receivablesDue,
                         pendingFixed: pendingFixed,
                         weeklyBudget: combinedWeeklyBudget,
                         weeksUntilMonthEnd: wl,

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/database_helper.dart';
+import '../logic/money.dart' show roundCents;
 import '../models/payment_card.dart';
 import '../models/transaction.dart';
 
@@ -44,14 +45,14 @@ final paymentCardProvider = StateNotifierProvider<PaymentCardNotifier, PaymentCa
   (ref) => PaymentCardNotifier(),
 );
 
-/// Computes the current billing cycle total for a given card from a list of transactions.
-double cardCycleTotal(PaymentCard card, List<Transaction> transactions) {
-  final cycle = card.currentCycle;
-  return transactions
+/// Total of the card's current billing cycle (cycle end is exclusive).
+double cardCycleTotal(PaymentCard card, List<Transaction> transactions, {DateTime? now}) {
+  final cycle = card.cycleAt(now ?? DateTime.now());
+  return roundCents(transactions
       .where((t) =>
           t.type == TransactionType.expense &&
           t.cardId == card.id &&
           !t.date.isBefore(cycle.start) &&
-          !t.date.isAfter(cycle.end))
-      .fold(0.0, (sum, t) => sum + t.amount);
+          t.date.isBefore(cycle.end))
+      .fold(0.0, (sum, t) => sum + t.amount));
 }

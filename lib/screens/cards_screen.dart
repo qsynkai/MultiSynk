@@ -74,6 +74,7 @@ class CardsScreen extends ConsumerWidget {
                               cycleTotal: total,
                               color: color,
                               fmt: fmt,
+                              onEdit: () => _showEditCardSheet(context, ref, card),
                               onDelete: () => ref.read(paymentCardProvider.notifier).delete(card.id),
                             );
                           },
@@ -193,6 +194,114 @@ class CardsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _showEditCardSheet(BuildContext context, WidgetRef ref, PaymentCard card) {
+    final nameCtrl = TextEditingController(text: card.name);
+    final lastFourCtrl = TextEditingController(text: card.lastFour ?? '');
+    int closingDay = card.closingDay;
+    int dueDay = card.dueDay;
+    String selectedColor = card.color;
+
+    final colors = [
+      '#7C3AED', '#2563EB', '#DC2626', '#059669',
+      '#D97706', '#DB2777', '#0891B2', '#65A30D',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Editar cartão', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(labelText: 'Nome do cartão'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: lastFourCtrl,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(labelText: 'Últimos 4 dígitos (opcional)'),
+                  keyboardType: TextInputType.number,
+                  maxLength: 4,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DaySelector(
+                        label: 'Dia de fechamento',
+                        value: closingDay,
+                        onChanged: (v) => setS(() => closingDay = v),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _DaySelector(
+                        label: 'Dia de vencimento',
+                        value: dueDay,
+                        onChanged: (v) => setS(() => dueDay = v),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text('Cor', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: colors.map((c) {
+                    final isSelected = c == selectedColor;
+                    return GestureDetector(
+                      onTap: () => setS(() => selectedColor = c),
+                      child: Container(
+                        width: 32, height: 32,
+                        decoration: BoxDecoration(
+                          color: _hexColor(c),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? Colors.white : Colors.transparent,
+                            width: 2.5,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    if (nameCtrl.text.isEmpty) return;
+                    ref.read(paymentCardProvider.notifier).update(PaymentCard(
+                      id: card.id,
+                      name: nameCtrl.text.trim(),
+                      lastFour: lastFourCtrl.text.isEmpty ? null : lastFourCtrl.text.trim(),
+                      closingDay: closingDay,
+                      dueDay: dueDay,
+                      color: selectedColor,
+                    ));
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  child: const Text('Salvar alterações'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _CardTile extends StatelessWidget {
@@ -200,6 +309,7 @@ class _CardTile extends StatelessWidget {
   final double cycleTotal;
   final Color color;
   final NumberFormat fmt;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _CardTile({
@@ -207,6 +317,7 @@ class _CardTile extends StatelessWidget {
     required this.cycleTotal,
     required this.color,
     required this.fmt,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -260,6 +371,10 @@ class _CardTile extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: AppColors.textMuted, size: 18),
+                  onPressed: onEdit,
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: AppColors.textMuted, size: 18),
@@ -384,7 +499,7 @@ class _DayPickerDialogState extends State<_DayPickerDialog> {
             mainAxisSpacing: 4,
             crossAxisSpacing: 4,
           ),
-          itemCount: 28,
+          itemCount: 31,
           itemBuilder: (context, i) {
             final day = i + 1;
             final isSelected = day == _selected;

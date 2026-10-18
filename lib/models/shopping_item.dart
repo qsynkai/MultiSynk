@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 enum ShoppingCategory { alimentacao, limpeza, higiene, eletronico, roupa, farmacia, outro }
 
 enum ShoppingPriority { urgent, high, medium, low, none }
@@ -42,11 +44,11 @@ class ShoppingItem {
   factory ShoppingItem.fromMap(Map<String, dynamic> map) => ShoppingItem(
     id: map['id'] as String,
     description: map['description'] as String,
-    quantity: map['quantity'] as int? ?? 1,
-    estimatedPrice: map['estimated_price'] != null ? (map['estimated_price'] as num).toDouble() : null,
-    category: ShoppingCategory.values.byName(map['category'] as String? ?? 'outro'),
-    isPurchased: (map['is_purchased'] as int? ?? 0) == 1,
-    aiPriority: map['ai_priority'] != null ? ShoppingPriority.values.byName(map['ai_priority'] as String) : null,
+    quantity: asInt(map['quantity'], 1),
+    estimatedPrice: asDoubleOrNull(map['estimated_price']),
+    category: enumByName(ShoppingCategory.values, map['category'], ShoppingCategory.outro),
+    isPurchased: asBool(map['is_purchased']),
+    aiPriority: enumByNameOrNull(ShoppingPriority.values, map['ai_priority']),
     aiReason: map['ai_reason'] as String?,
     createdAt: DateTime.parse(map['created_at'] as String),
   );

@@ -7,6 +7,7 @@ import '../providers/task_provider.dart';
 import '../providers/shopping_provider.dart';
 import '../models/task.dart';
 import '../models/shopping_item.dart';
+import '../logic/money.dart';
 
 class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
@@ -314,7 +315,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with SingleTickerProv
                 onPressed: () {
                   if (descCtrl.text.isEmpty) return;
                   final qty = int.tryParse(qtyCtrl.text) ?? 1;
-                  final price = double.tryParse(priceCtrl.text.replaceAll(',', '.'));
+                  final price = parseMoney(priceCtrl.text);
                   ref.read(shoppingProvider.notifier).add(ShoppingItem(
                     id: const Uuid().v4(),
                     description: descCtrl.text,

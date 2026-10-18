@@ -11,6 +11,7 @@ import '../models/receivable.dart';
 import '../models/fixed_expense.dart';
 import '../providers/fixed_expense_provider.dart';
 import '../widgets/payment_method_selector.dart';
+import '../logic/money.dart';
 
 class FinanceScreen extends ConsumerStatefulWidget {
   const FinanceScreen({super.key});
@@ -219,29 +220,29 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> with SingleTicker
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
-                    if (descCtrl.text.isEmpty || amount == null) return;
-                    final groupId = installments > 1 ? const Uuid().v4() : null;
-                    final perInstall = installments > 1 ? amount / installments : amount;
+                    final amount = parseMoney(amountCtrl.text);
+                    if (descCtrl.text.trim().isEmpty || amount == null) return;
+                    final count = installments < 1 ? 1 : installments;
+                    final groupId = count > 1 ? const Uuid().v4() : null;
+                    final parts = splitInstallments(amount, count);
                     final now = DateTime.now();
-                    for (int i = 0; i < installments; i++) {
-                      final date = DateTime(now.year, now.month + i, now.day);
-                      final desc = installments > 1
-                          ? '${descCtrl.text} (${i + 1}/$installments)'
-                          : descCtrl.text;
-                      ref.read(financeProvider.notifier).addTransaction(Transaction(
-                        id: const Uuid().v4(),
-                        description: desc,
-                        amount: perInstall,
-                        type: isExpense ? TransactionType.expense : TransactionType.income,
-                        date: date,
-                        paymentMethod: paymentMethod,
-                        cardId: selectedCard?.id,
-                        installments: installments,
-                        installmentNumber: i + 1,
-                        installmentGroupId: groupId,
-                      ));
-                    }
+                    ref.read(financeProvider.notifier).addTransactions([
+                      for (int i = 0; i < count; i++)
+                        Transaction(
+                          id: const Uuid().v4(),
+                          description: count > 1
+                              ? '${descCtrl.text.trim()} (${i + 1}/$count)'
+                              : descCtrl.text.trim(),
+                          amount: parts[i],
+                          type: isExpense ? TransactionType.expense : TransactionType.income,
+                          date: addMonthsClamped(now, i),
+                          paymentMethod: paymentMethod,
+                          cardId: selectedCard?.id,
+                          installments: count,
+                          installmentNumber: i + 1,
+                          installmentGroupId: groupId,
+                        ),
+                    ]);
                     Navigator.pop(ctx);
                   },
                   style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
@@ -256,14 +257,14 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> with SingleTicker
   }
 }
 
-class _TransactionsTab extends StatelessWidget {
+class _TransactionsTab extends ConsumerWidget {
   final FinanceState finance;
   final NumberFormat fmt;
 
   const _TransactionsTab({required this.finance, required this.fmt});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (finance.transactions.isEmpty) {
       return const Center(
         child: Column(
@@ -285,43 +286,79 @@ class _TransactionsTab extends StatelessWidget {
       itemBuilder: (context, i) {
         final t = finance.transactions[i];
         final isIncome = t.type == TransactionType.income;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+        return Dismissible(
+          key: ValueKey(t.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: AppColors.danger,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Icon(Icons.delete_rounded, color: Colors.white, size: 22),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 38, height: 38,
-                decoration: BoxDecoration(
-                  color: (isIncome ? AppColors.success : AppColors.danger).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
+          confirmDismiss: (_) => showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppColors.surface,
+              title: const Text('Apagar lançamento?', style: TextStyle(color: AppColors.textPrimary)),
+              content: Text('${t.description} — ${fmt.format(t.amount)}', style: const TextStyle(color: AppColors.textSecondary)),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apagar', style: TextStyle(color: AppColors.danger))),
+              ],
+            ),
+          ),
+          onDismissed: (_) => ref.read(financeProvider.notifier).deleteTransaction(t.id),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: (isIncome ? AppColors.success : AppColors.danger).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                    color: isIncome ? AppColors.success : AppColors.danger,
+                    size: 18,
+                  ),
                 ),
-                child: Icon(
-                  isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                  color: isIncome ? AppColors.success : AppColors.danger,
-                  size: 18,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+                      Row(
+                        children: [
+                          Text(DateFormat('dd/MM/yyyy').format(t.date), style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          if (t.paymentMethod == PaymentMethod.credit) ...[
+                            const SizedBox(width: 6),
+                            Icon(Icons.credit_card, color: AppColors.textMuted.withOpacity(0.6), size: 12),
+                            if (t.installments > 1) Text(' ${t.installmentNumber}/${t.installments}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
-                    Text(DateFormat('dd/MM/yyyy').format(t.date), style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                  ],
+                Text(
+                  '${isIncome ? '+' : '-'} ${fmt.format(t.amount)}',
+                  style: TextStyle(color: isIncome ? AppColors.success : AppColors.danger, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
-              ),
-              Text(
-                '${isIncome ? '+' : '-'} ${fmt.format(t.amount)}',
-                style: TextStyle(color: isIncome ? AppColors.success : AppColors.danger, fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -491,7 +528,7 @@ class _FixedExpensesTab extends ConsumerWidget {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+                  final amount = parseMoney(amountCtrl.text);
                   if (descCtrl.text.isEmpty || amount == null) return;
                   ref.read(fixedExpenseProvider.notifier).add(FixedExpense(
                     id: const Uuid().v4(),
@@ -769,7 +806,7 @@ class _ReceivablesTab extends ConsumerWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+                  final amount = parseMoney(amountCtrl.text);
                   if (descCtrl.text.isEmpty || amount == null) return;
                   ref.read(financeProvider.notifier).addReceivable(Receivable(
                     id: const Uuid().v4(),

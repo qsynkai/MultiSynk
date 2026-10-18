@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 class StudioConfig {
   final double safetyPercent;  // caixa de segurança
   final double savingsPercent; // guardar / poupança
@@ -17,8 +19,8 @@ class StudioConfig {
   };
 
   factory StudioConfig.fromMap(Map<String, dynamic> map) => StudioConfig(
-    safetyPercent: map['safety_percent'] ?? 0.10,
-    savingsPercent: map['savings_percent'] ?? 0.15,
+    safetyPercent: asDouble(map['safety_percent'], 0.10),
+    savingsPercent: asDouble(map['savings_percent'], 0.15),
   );
 
   StudioConfig copyWith({double? safetyPercent, double? savingsPercent}) =>

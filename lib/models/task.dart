@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 enum TaskPriority { none, low, medium, high, urgent }
 enum TaskCategory { financial, vehicle, personal, work, health, other }
 
@@ -42,18 +44,16 @@ class Task {
   };
 
   factory Task.fromMap(Map<String, dynamic> map) => Task(
-    id: map['id'],
-    title: map['title'],
-    description: map['description'],
-    priority: TaskPriority.values.byName(map['priority'] ?? 'none'),
-    aiPriority: map['ai_priority'] != null
-        ? TaskPriority.values.byName(map['ai_priority'])
-        : null,
-    aiReason: map['ai_reason'],
-    category: TaskCategory.values.byName(map['category'] ?? 'personal'),
-    createdAt: DateTime.parse(map['created_at']),
-    dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
-    isDone: map['is_done'] == 1,
+    id: map['id'] as String,
+    title: map['title'] as String,
+    description: map['description'] as String?,
+    priority: enumByName(TaskPriority.values, map['priority'], TaskPriority.none),
+    aiPriority: enumByNameOrNull(TaskPriority.values, map['ai_priority']),
+    aiReason: map['ai_reason'] as String?,
+    category: enumByName(TaskCategory.values, map['category'], TaskCategory.personal),
+    createdAt: DateTime.parse(map['created_at'] as String),
+    dueDate: map['due_date'] != null ? DateTime.parse(map['due_date'] as String) : null,
+    isDone: asBool(map['is_done']),
   );
 
   Task copyWith({

@@ -9,6 +9,7 @@ import 'app.dart';
 import 'services/supabase_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
+import 'database/database_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,10 +20,7 @@ void main() async {
   try {
     await SupabaseService.initialize();
     ConnectivityService.instance.start();
-    // Sync pendente da última sessão offline
-    if (SupabaseService.isSignedIn && await SyncService.hasPendingSync()) {
-      SyncService.syncAll();
-    }
+    DatabaseHelper.instance.onLocalChange = SyncService.scheduleSync;
   } catch (_) {}
   try {
     await HomeWidget.setAppGroupId('group.com.focusbudget.app');

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/fiorino_entry.dart';
 
@@ -84,7 +85,7 @@ class FiorinoNotifier extends StateNotifier<FiorinoState> {
 
   Future<void> addEntry(double amount, {String? notes, DateTime? date}) async {
     final entry = FiorinoEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       amount: amount,
       date: date ?? DateTime.now(),
       notes: notes,

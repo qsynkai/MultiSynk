@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 class FiorinoConfig {
   final double safetyPercent;
   final double maintenancePercent;
@@ -20,9 +22,9 @@ class FiorinoConfig {
   };
 
   factory FiorinoConfig.fromMap(Map<String, dynamic> map) => FiorinoConfig(
-    safetyPercent: map['safety_percent'] ?? 0.10,
-    maintenancePercent: map['maintenance_percent'] ?? 0.10,
-    fuelPercent: map['fuel_percent'] ?? 0.20,
+    safetyPercent: asDouble(map['safety_percent'], 0.10),
+    maintenancePercent: asDouble(map['maintenance_percent'], 0.10),
+    fuelPercent: asDouble(map['fuel_percent'], 0.20),
   );
 
   FiorinoConfig copyWith({
@@ -72,12 +74,12 @@ class FiorinoEntry {
   };
 
   factory FiorinoEntry.fromMap(Map<String, dynamic> map) => FiorinoEntry(
-    id: map['id'],
-    amount: map['amount'],
-    date: DateTime.parse(map['date']),
-    notes: map['notes'],
-    safetyPercent: map['safety_percent'] ?? 0.10,
-    maintenancePercent: map['maintenance_percent'] ?? 0.10,
-    fuelPercent: map['fuel_percent'] ?? 0.20,
+    id: map['id'] as String,
+    amount: asDouble(map['amount']),
+    date: DateTime.parse(map['date'] as String),
+    notes: map['notes'] as String?,
+    safetyPercent: asDouble(map['safety_percent'], 0.10),
+    maintenancePercent: asDouble(map['maintenance_percent'], 0.10),
+    fuelPercent: asDouble(map['fuel_percent'], 0.20),
   );
 }

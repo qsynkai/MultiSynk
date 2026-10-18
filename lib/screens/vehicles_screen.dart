@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../providers/vehicle_provider.dart';
 import '../providers/fiorino_provider.dart';
 import '../models/vehicle.dart';
+import '../logic/money.dart';
 import 'fiorino_screen.dart';
 
 class VehiclesScreen extends ConsumerWidget {
@@ -390,11 +391,11 @@ class _VehicleCard extends ConsumerWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
-                if (descCtrl.text.isEmpty || amount == null) return;
+                final amount = parseMoney(amountCtrl.text);
+                if (descCtrl.text.trim().isEmpty || amount == null) return;
                 ref.read(vehicleProvider.notifier).addExpense(
                   vehicle.id,
-                  descCtrl.text,
+                  descCtrl.text.trim(),
                   amount,
                   DateTime.now(),
                 );

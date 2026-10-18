@@ -8,6 +8,7 @@ import '../providers/fixed_expense_provider.dart';
 import '../models/studio_entry.dart';
 import '../models/studio_config.dart';
 import '../models/fixed_expense.dart';
+import '../logic/money.dart';
 
 const _studioRose = Color(0xFFD4548A);
 const _studioBg = Color(0xFF1A0D14);
@@ -467,7 +468,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
-          final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.')) ?? 0;
+          final amount = parseMoney(amountCtrl.text) ?? 0;
           final isToday = _isSameDay(selectedDate, DateTime.now());
           final dateLabel = isToday
               ? 'Hoje, ${DateFormat('dd/MM', 'pt_BR').format(selectedDate)}'
@@ -1415,7 +1416,7 @@ class _StudioFixedTab extends ConsumerWidget {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+                  final amount = parseMoney(amountCtrl.text);
                   if (descCtrl.text.isEmpty || amount == null || amount <= 0) return;
                   ref.read(fixedExpenseProvider.notifier).add(FixedExpense(
                     id: const Uuid().v4(),

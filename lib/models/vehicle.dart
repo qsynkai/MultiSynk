@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 enum MaintenancePriority { low, medium, high, urgent }
 
 class MaintenanceItem {
@@ -33,14 +35,14 @@ class MaintenanceItem {
   };
 
   factory MaintenanceItem.fromMap(Map<String, dynamic> map) => MaintenanceItem(
-    id: map['id'],
-    vehicleId: map['vehicle_id'],
-    title: map['title'],
-    description: map['description'],
-    priority: MaintenancePriority.values.byName(map['priority']),
-    dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
-    estimatedCost: map['estimated_cost'],
-    isDone: map['is_done'] == 1,
+    id: map['id'] as String,
+    vehicleId: map['vehicle_id'] as String,
+    title: map['title'] as String,
+    description: map['description'] as String?,
+    priority: enumByName(MaintenancePriority.values, map['priority'], MaintenancePriority.medium),
+    dueDate: map['due_date'] != null ? DateTime.parse(map['due_date'] as String) : null,
+    estimatedCost: asDoubleOrNull(map['estimated_cost']),
+    isDone: asBool(map['is_done']),
   );
 
   MaintenanceItem copyWith({bool? isDone}) => MaintenanceItem(
@@ -99,14 +101,14 @@ class Vehicle {
     List<MaintenanceItem> maintenanceItems = const [],
     double totalSpent = 0,
   }) => Vehicle(
-    id: map['id'],
-    name: map['name'],
-    brand: map['brand'],
-    model: map['model'],
-    color: map['color'],
-    plate: map['plate'],
-    year: map['year'],
-    notes: map['notes'],
+    id: map['id'] as String,
+    name: map['name'] as String,
+    brand: map['brand'] as String,
+    model: map['model'] as String,
+    color: map['color'] as String,
+    plate: map['plate'] as String?,
+    year: asIntOrNull(map['year']),
+    notes: map['notes'] as String?,
     maintenanceItems: maintenanceItems,
     totalSpent: totalSpent,
   );

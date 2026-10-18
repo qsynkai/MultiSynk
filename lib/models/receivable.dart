@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 enum ReceivableStatus { pending, received, partial }
 
 class Receivable {
@@ -32,12 +34,12 @@ class Receivable {
   };
 
   factory Receivable.fromMap(Map<String, dynamic> map) => Receivable(
-    id: map['id'],
-    description: map['description'],
-    expectedAmount: map['expected_amount'],
-    receivedAmount: map['received_amount'],
-    expectedDate: DateTime.parse(map['expected_date']),
-    status: ReceivableStatus.values.byName(map['status']),
-    isRecurring: map['is_recurring'] == 1,
+    id: map['id'] as String,
+    description: map['description'] as String,
+    expectedAmount: asDouble(map['expected_amount']),
+    receivedAmount: asDoubleOrNull(map['received_amount']),
+    expectedDate: DateTime.parse(map['expected_date'] as String),
+    status: enumByName(ReceivableStatus.values, map['status'], ReceivableStatus.pending),
+    isRecurring: asBool(map['is_recurring']),
   );
 }

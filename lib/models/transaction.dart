@@ -1,3 +1,5 @@
+import 'map_utils.dart';
+
 enum TransactionType { income, expense }
 
 enum PaymentMethod { cash, pix, debit, credit }
@@ -49,20 +51,18 @@ class Transaction {
   };
 
   factory Transaction.fromMap(Map<String, dynamic> map) => Transaction(
-    id: map['id'],
-    description: map['description'],
-    amount: (map['amount'] as num).toDouble(),
-    type: TransactionType.values.byName(map['type']),
-    date: DateTime.parse(map['date']),
-    category: map['category'],
-    vehicleId: map['vehicle_id'],
-    paymentMethod: map['payment_method'] != null
-        ? PaymentMethod.values.byName(map['payment_method'])
-        : null,
-    cardId: map['card_id'],
-    installments: map['installments'] as int? ?? 1,
-    installmentNumber: map['installment_number'] as int? ?? 1,
-    installmentGroupId: map['installment_group_id'],
+    id: map['id'] as String,
+    description: map['description'] as String,
+    amount: asDouble(map['amount']),
+    type: enumByName(TransactionType.values, map['type'], TransactionType.expense),
+    date: DateTime.parse(map['date'] as String),
+    category: map['category'] as String?,
+    vehicleId: map['vehicle_id'] as String?,
+    paymentMethod: enumByNameOrNull(PaymentMethod.values, map['payment_method']),
+    cardId: map['card_id'] as String?,
+    installments: asInt(map['installments'], 1),
+    installmentNumber: asInt(map['installment_number'], 1),
+    installmentGroupId: map['installment_group_id'] as String?,
   );
 
   Transaction copyWith({

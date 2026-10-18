@@ -1,41 +1,87 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'supabase_service.dart';
-import 'connectivity_service.dart';
 import '../database/database_helper.dart';
+import '../sync/supabase_remote_store.dart';
+import '../sync/sync_engine.dart';
+import 'connectivity_service.dart';
+import 'household_service.dart';
+import 'supabase_service.dart';
 
-/// Sincroniza dados do SQLite local com o Supabase.
-/// - SQLite é a fonte primária (funciona 100% offline)
-/// - Supabase recebe upsert quando há rede + usuário autenticado
-/// - Se offline, marca pendente e sincroniza quando reconectar
+enum SyncState { idle, syncing, offline, error }
+
+/// Two-way sync between the local SQLite database (source of truth on the device, works offline)
+/// and the household's data in the cloud. Safe to call often: concurrent calls coalesce.
 class SyncService {
-  static final _db = DatabaseHelper.instance;
   static const _pendingKey = 'sync_pending';
+  static const _householdKey = 'sync_household_id';
+  static const _debounce = Duration(seconds: 3);
 
-  static Future<void> syncAll({bool silent = false}) async {
+  /// Bumped whenever data pulled from the cloud changed the local database.
+  static final dataVersion = ValueNotifier<int>(0);
+  static final state = ValueNotifier<SyncState>(SyncState.idle);
+  static String? lastError;
+  static DateTime? lastSyncAt;
+
+  static bool _running = false;
+  static bool _rerun = false;
+  static Timer? _timer;
+
+  /// Debounced sync after a local edit.
+  static void scheduleSync() {
     if (!SupabaseService.isSignedIn) return;
+    _timer?.cancel();
+    _timer = Timer(_debounce, syncAll);
+  }
 
-    final online = await ConnectivityService.isOnline();
-    if (!online) {
-      await _markPending();
+  static Future<void> syncAll() async {
+    if (!SupabaseService.isSignedIn) return;
+    if (_running) {
+      _rerun = true;
       return;
     }
-
+    _running = true;
     try {
-      await Future.wait([
-        _syncTransactions(),
-        _syncReceivables(),
-        _syncFixedExpenses(),
-        _syncPaymentCards(),
-        _syncTasks(),
-        _syncShoppingItems(),
-        _syncVehicles(),
-        _syncFiorinoEntries(),
-        _syncStudioEntries(),
-        _syncConfigs(),
-      ]);
-      await _clearPending();
-    } catch (_) {
-      await _markPending();
+      do {
+        _rerun = false;
+        await _runOnce();
+      } while (_rerun);
+    } finally {
+      _running = false;
+    }
+  }
+
+  static Future<void> _runOnce() async {
+    if (!await ConnectivityService.isOnline()) {
+      await _setPending(true);
+      state.value = SyncState.offline;
+      return;
+    }
+    state.value = SyncState.syncing;
+    try {
+      final household = await HouseholdService.ensure();
+      final prefs = await SharedPreferences.getInstance();
+      final cursors = PrefsCursorStore();
+      if (prefs.getString(_householdKey) != household.id) {
+        // New account or new household: everything on this device must go up to it.
+        await DatabaseHelper.instance.markAllDirty();
+        await cursors.clear();
+        await prefs.setString(_householdKey, household.id);
+      }
+      final report = await SyncEngine(
+        DatabaseHelper.instance,
+        SupabaseRemoteStore(SupabaseService.client),
+        cursors,
+      ).run(household.id);
+      await _setPending(false);
+      lastError = null;
+      lastSyncAt = DateTime.now();
+      state.value = SyncState.idle;
+      if (report.pulledChanges > 0) dataVersion.value++;
+    } catch (e) {
+      lastError = e.toString();
+      await _setPending(true);
+      state.value = SyncState.error;
     }
   }
 
@@ -44,89 +90,17 @@ class SyncService {
     return prefs.getBool(_pendingKey) ?? false;
   }
 
-  static Future<void> _markPending() async {
+  static Future<void> _setPending(bool value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_pendingKey, true);
+    await prefs.setBool(_pendingKey, value);
   }
 
-  static Future<void> _clearPending() async {
+  /// After sign-out the next account must re-upload this device's data to its own household.
+  static Future<void> onSignedOut() async {
+    _timer?.cancel();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_pendingKey, false);
-  }
-
-  static String get _uid => SupabaseService.client.auth.currentUser!.id;
-
-  static Future<void> _upsert(String table, List<Map<String, dynamic>> rows) async {
-    if (rows.isEmpty) return;
-    await SupabaseService.client.from(table).upsert(
-      rows.map((r) => {...r, 'user_id': _uid}).toList(),
-      onConflict: 'id',
-    );
-  }
-
-  static Future<void> _syncTransactions() async {
-    final rows = await _db.getTransactions();
-    await _upsert('transactions', rows.map((t) => t.toMap()).toList());
-  }
-
-  static Future<void> _syncReceivables() async {
-    final rows = await _db.getReceivables();
-    await _upsert('receivables', rows.map((r) => r.toMap()).toList());
-  }
-
-  static Future<void> _syncFixedExpenses() async {
-    final rows = await _db.getFixedExpenses();
-    await _upsert('fixed_expenses', rows.map((f) => f.toMap()).toList());
-  }
-
-  static Future<void> _syncPaymentCards() async {
-    final rows = await _db.getPaymentCards();
-    await _upsert('payment_cards', rows.map((c) => c.toMap()).toList());
-  }
-
-  static Future<void> _syncTasks() async {
-    final rows = await _db.getTasks(includeDone: true);
-    await _upsert('tasks', rows.map((t) => t.toMap()).toList());
-  }
-
-  static Future<void> _syncShoppingItems() async {
-    final rows = await _db.getShoppingItems();
-    await _upsert('shopping_items', rows.map((s) => s.toMap()).toList());
-  }
-
-  static Future<void> _syncVehicles() async {
-    final vehicles = await _db.getVehicles();
-    await _upsert('vehicles', vehicles.map((v) => v.toMap()).toList());
-
-    final allMaintenance = <Map<String, dynamic>>[];
-    for (final v in vehicles) {
-      final items = await _db.getMaintenanceItems(v.id);
-      allMaintenance.addAll(items.map((m) => m.toMap()));
-    }
-    await _upsert('maintenance_items', allMaintenance);
-  }
-
-  static Future<void> _syncFiorinoEntries() async {
-    final rows = await _db.getFiorinoEntries();
-    await _upsert('fiorino_entries', rows.map((f) => f.toMap()).toList());
-  }
-
-  static Future<void> _syncStudioEntries() async {
-    final rows = await _db.getStudioEntries();
-    await _upsert('studio_entries', rows.map((s) => s.toMap()).toList());
-  }
-
-  static Future<void> _syncConfigs() async {
-    final uid = _uid;
-    final fCfg = await _db.getFiorinoConfig();
-    await SupabaseService.client.from('fiorino_config').upsert(
-      {...fCfg.toMap(), 'key': 'default', 'user_id': uid},
-      onConflict: 'key,user_id',
-    );
-    final sCfg = await _db.getStudioConfig();
-    await SupabaseService.client.from('studio_config').upsert(
-      {...sCfg.toMap(), 'key': 'default', 'user_id': uid},
-      onConflict: 'key,user_id',
-    );
+    await prefs.remove(_householdKey);
+    await PrefsCursorStore().clear();
+    state.value = SyncState.idle;
   }
 }

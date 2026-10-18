@@ -1,3 +1,4 @@
+import 'map_utils.dart';
 import 'transaction.dart' show PaymentMethod;
 
 class StudioEntry {
@@ -49,19 +50,17 @@ class StudioEntry {
   };
 
   factory StudioEntry.fromMap(Map<String, dynamic> map) => StudioEntry(
-    id: map['id'],
-    amount: (map['amount'] as num).toDouble(),
-    type: map['type'],
-    description: map['description'],
-    category: map['category'],
-    date: DateTime.parse(map['date']),
-    notes: map['notes'],
-    paymentMethod: map['payment_method'] != null
-        ? PaymentMethod.values.byName(map['payment_method'])
-        : null,
-    cardId: map['card_id'],
-    installments: map['installments'] as int? ?? 1,
-    installmentNumber: map['installment_number'] as int? ?? 1,
-    installmentGroupId: map['installment_group_id'],
+    id: map['id'] as String,
+    amount: asDouble(map['amount']),
+    type: map['type'] as String,
+    description: map['description'] as String,
+    category: map['category'] as String?,
+    date: DateTime.parse(map['date'] as String),
+    notes: map['notes'] as String?,
+    paymentMethod: enumByNameOrNull(PaymentMethod.values, map['payment_method']),
+    cardId: map['card_id'] as String?,
+    installments: asInt(map['installments'], 1),
+    installmentNumber: asInt(map['installment_number'], 1),
+    installmentGroupId: map['installment_group_id'] as String?,
   );
 }
