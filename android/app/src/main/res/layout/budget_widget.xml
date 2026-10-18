@@ -109,8 +109,8 @@
                 android:maxLines="1" />
         </LinearLayout>
 
-        <View
-            android:layout_width="0.5dp"
+        <FrameLayout
+            android:layout_width="1dp"
             android:layout_height="28dp"
             android:layout_gravity="center_vertical"
             android:background="#33FFFFFF" />
@@ -139,8 +139,8 @@
                 android:maxLines="1" />
         </LinearLayout>
 
-        <View
-            android:layout_width="0.5dp"
+        <FrameLayout
+            android:layout_width="1dp"
             android:layout_height="28dp"
             android:layout_gravity="center_vertical"
             android:background="#33FFFFFF" />
