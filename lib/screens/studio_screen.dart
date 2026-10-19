@@ -1411,6 +1411,9 @@ class _StudioFixedTab extends ConsumerWidget {
     final amountCtrl = TextEditingController();
     String category = _expenseCategories.first;
     int dueDay = 1;
+    PaymentMethod? paymentMethod;
+    PaymentCard? selectedCard;
+    int installments = 1;
 
     showModalBottomSheet(
       context: context,
@@ -1418,102 +1421,120 @@ class _StudioFixedTab extends ConsumerWidget {
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
+        builder: (ctx, setState) {
+          final cards = ref.read(paymentCardProvider).cards;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(color: _studioRose.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.repeat_rounded, color: _studioRose, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text('Nova despesa fixa — Studio', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descCtrl,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Descrição', hintText: 'ex: Aluguel sala, Energia, Produto mensal'),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountCtrl,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Valor mensal (R\$)', hintText: '0,00'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 16),
-              // Categoria
-              const Text('Categoria', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _expenseCategories.map((cat) {
-                  final sel = category == cat;
-                  return GestureDetector(
-                    onTap: () => setState(() => category = cat),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: sel ? _studioRose.withOpacity(0.15) : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: sel ? _studioRose.withOpacity(0.5) : AppColors.surfaceBorder),
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(color: _studioRose.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.repeat_rounded, color: _studioRose, size: 18),
                       ),
-                      child: Text(cat, style: TextStyle(color: sel ? _studioRose : AppColors.textSecondary, fontSize: 12, fontWeight: sel ? FontWeight.w600 : FontWeight.w400)),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              // Dia do vencimento
-              Row(
-                children: [
-                  const Text('Vence todo dia', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: const InputDecoration(hintText: 'ex: 5', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) => dueDay = int.tryParse(v) ?? 1,
-                    ),
+                      const SizedBox(width: 10),
+                      const Text('Nova despesa fixa — Studio', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                    ],
                   ),
-                  const Text(' de cada mês', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descCtrl,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Descrição', hintText: 'ex: Aluguel sala, Energia, Produto mensal'),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountCtrl,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    decoration: const InputDecoration(labelText: 'Valor mensal (R\$)', hintText: '0,00'),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 16),
+                  // Forma de pagamento
+                  PaymentMethodSelector(
+                    selectedMethod: paymentMethod,
+                    selectedCard: selectedCard,
+                    cards: cards,
+                    installments: installments,
+                    onMethodChanged: (m) => setState(() { paymentMethod = m; if (m != PaymentMethod.credit) { selectedCard = null; installments = 1; } }),
+                    onCardChanged: (c) => setState(() => selectedCard = c),
+                    onInstallmentsChanged: (v) => setState(() => installments = v),
+                  ),
+                  const SizedBox(height: 16),
+                  // Categoria
+                  const Text('Categoria', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _expenseCategories.map((cat) {
+                      final sel = category == cat;
+                      return GestureDetector(
+                        onTap: () => setState(() => category = cat),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: sel ? _studioRose.withOpacity(0.15) : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: sel ? _studioRose.withOpacity(0.5) : AppColors.surfaceBorder),
+                          ),
+                          child: Text(cat, style: TextStyle(color: sel ? _studioRose : AppColors.textSecondary, fontSize: 12, fontWeight: sel ? FontWeight.w600 : FontWeight.w400)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  // Dia do vencimento
+                  Row(
+                    children: [
+                      const Text('Vence todo dia', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          style: const TextStyle(color: AppColors.textPrimary),
+                          decoration: const InputDecoration(hintText: 'ex: 5', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => dueDay = int.tryParse(v) ?? 1,
+                        ),
+                      ),
+                      const Text(' de cada mês', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      final amount = parseMoney(amountCtrl.text);
+                      if (descCtrl.text.isEmpty || amount == null || amount <= 0) return;
+                      ref.read(fixedExpenseProvider.notifier).add(FixedExpense(
+                        id: const Uuid().v4(),
+                        description: descCtrl.text.trim(),
+                        amount: amount,
+                        category: category,
+                        scope: 'studio',
+                        dueDay: dueDay.clamp(1, 28),
+                        paymentMethod: paymentMethod,
+                        cardId: selectedCard?.id,
+                      ));
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      backgroundColor: _studioRose,
+                    ),
+                    child: const Text('Salvar despesa fixa'),
+                  ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  final amount = parseMoney(amountCtrl.text);
-                  if (descCtrl.text.isEmpty || amount == null || amount <= 0) return;
-                  ref.read(fixedExpenseProvider.notifier).add(FixedExpense(
-                    id: const Uuid().v4(),
-                    description: descCtrl.text.trim(),
-                    amount: amount,
-                    category: category,
-                    scope: 'studio',
-                    dueDay: dueDay.clamp(1, 28),
-                  ));
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  backgroundColor: _studioRose,
-                ),
-                child: const Text('Salvar despesa fixa'),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1578,6 +1599,10 @@ class _StudioFixedTile extends StatelessWidget {
                       const Text(' · ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                     if (expense.dueDay > 0)
                       Text('Vence dia ${expense.dueDay}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    if (expense.paymentMethod == PaymentMethod.credit) ...[
+                      const Text(' · ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      Icon(Icons.credit_card, color: AppColors.textMuted.withOpacity(0.6), size: 12),
+                    ],
                   ],
                 ),
               ],

@@ -54,7 +54,7 @@ const _seedVehicles = [
 ];
 
 class DatabaseHelper {
-  static const schemaVersion = 9;
+  static const schemaVersion = 10;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   DatabaseHelper._internal()
@@ -202,6 +202,14 @@ class DatabaseHelper {
     }
     if (oldVersion < 9) {
       await _addSyncSchema(db, stampExisting: true);
+    }
+    if (oldVersion < 10) {
+      if (!await _hasColumn(db, 'fixed_expenses', 'payment_method')) {
+        await db.execute('ALTER TABLE fixed_expenses ADD COLUMN payment_method TEXT');
+      }
+      if (!await _hasColumn(db, 'fixed_expenses', 'card_id')) {
+        await db.execute('ALTER TABLE fixed_expenses ADD COLUMN card_id TEXT');
+      }
     }
   }
 
@@ -371,7 +379,9 @@ class DatabaseHelper {
         category TEXT NOT NULL DEFAULT '',
         scope TEXT NOT NULL DEFAULT 'personal',
         is_active INTEGER NOT NULL DEFAULT 1,
-        due_day INTEGER NOT NULL DEFAULT 10
+        due_day INTEGER NOT NULL DEFAULT 10,
+        payment_method TEXT,
+        card_id TEXT
       )
     ''');
 

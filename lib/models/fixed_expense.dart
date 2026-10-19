@@ -1,4 +1,5 @@
 import 'map_utils.dart';
+import 'transaction.dart' show PaymentMethod;
 
 class FixedExpense {
   final String id;
@@ -8,6 +9,8 @@ class FixedExpense {
   final String scope; // 'studio' | 'personal'
   final bool isActive;
   final int dueDay;
+  final PaymentMethod? paymentMethod;
+  final String? cardId;
 
   const FixedExpense({
     required this.id,
@@ -17,6 +20,8 @@ class FixedExpense {
     required this.scope,
     this.isActive = true,
     this.dueDay = 10,
+    this.paymentMethod,
+    this.cardId,
   });
 
   Map<String, dynamic> toMap() => {
@@ -27,6 +32,8 @@ class FixedExpense {
     'scope': scope,
     'is_active': isActive ? 1 : 0,
     'due_day': dueDay,
+    'payment_method': paymentMethod?.name,
+    'card_id': cardId,
   };
 
   factory FixedExpense.fromMap(Map<String, dynamic> map) => FixedExpense(
@@ -37,6 +44,8 @@ class FixedExpense {
     scope: map['scope'] as String? ?? 'personal',
     isActive: asBool(map['is_active'], true),
     dueDay: asInt(map['due_day'], 10),
+    paymentMethod: enumByNameOrNull(PaymentMethod.values, map['payment_method']),
+    cardId: map['card_id'] as String?,
   );
 
   FixedExpense copyWith({bool? isActive}) => FixedExpense(
@@ -47,5 +56,7 @@ class FixedExpense {
     scope: scope,
     dueDay: dueDay,
     isActive: isActive ?? this.isActive,
+    paymentMethod: paymentMethod,
+    cardId: cardId,
   );
 }
