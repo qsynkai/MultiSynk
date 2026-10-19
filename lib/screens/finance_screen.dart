@@ -851,6 +851,11 @@ class _ReceivablesTab extends ConsumerWidget {
                                 ),
                             ],
                           ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => _confirmDelete(context, ref, r),
+                            child: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 18),
+                          ),
                         ],
                       ),
                     );
@@ -858,6 +863,35 @@ class _ReceivablesTab extends ConsumerWidget {
                 ),
         ),
       ],
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, Receivable r) {
+    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Apagar recebimento?', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: Text(
+          'Apagar "${r.description}" (${fmt.format(r.expectedAmount)})?${r.linkedTransactionId != null ? '\n\nA receita lançada automaticamente também será removida.' : ''}',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              if (r.linkedTransactionId != null) {
+                await ref.read(financeProvider.notifier).unmarkReceivableReceived(r);
+              }
+              ref.read(financeProvider.notifier).deleteReceivable(r.id);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
     );
   }
 

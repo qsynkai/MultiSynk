@@ -366,7 +366,7 @@ class CardsScreen extends ConsumerWidget {
   }
 }
 
-class _CardTile extends StatelessWidget {
+class _CardTile extends ConsumerWidget {
   final PaymentCard card;
   final double cycleTotal;
   final Color color;
@@ -386,7 +386,10 @@ class _CardTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final cardState = ref.watch(paymentCardProvider);
+    final isBillPaid = cardState.isBillPaid(card.id, now.year, now.month);
     final days = card.daysUntilDue;
     final daysLabel = days == 0
         ? 'Vence hoje!'
@@ -490,6 +493,48 @@ class _CardTile extends StatelessWidget {
                   child: Text(daysLabel, style: TextStyle(color: urgentColor, fontSize: 12, fontWeight: FontWeight.w500)),
                 ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: GestureDetector(
+              onTap: () {
+                if (isBillPaid) {
+                  ref.read(paymentCardProvider.notifier).unmarkBillPaid(card.id, now.year, now.month);
+                } else {
+                  ref.read(paymentCardProvider.notifier).markBillPaid(card.id, now.year, now.month, amount: cycleTotal);
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isBillPaid ? AppColors.success.withOpacity(0.12) : AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isBillPaid ? AppColors.success.withOpacity(0.5) : AppColors.surfaceBorder,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isBillPaid ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      color: isBillPaid ? AppColors.success : AppColors.textMuted,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isBillPaid ? 'Fatura paga' : 'Marcar fatura como paga',
+                      style: TextStyle(
+                        color: isBillPaid ? AppColors.success : AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: isBillPaid ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
