@@ -438,6 +438,7 @@ class DatabaseHelper {
 
   // ── Transactions ────────────────────────────────────────────────────────────
   Future<void> insertTransaction(Transaction t) => _put('transactions', t.toMap());
+  Future<void> updateTransaction(Transaction t) => _put('transactions', t.toMap());
 
   Future<List<Transaction>> getTransactions({String? vehicleId}) async {
     final db = await database;

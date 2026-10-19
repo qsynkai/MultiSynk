@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../providers/payment_card_provider.dart';
 import '../providers/finance_provider.dart';
 import '../models/payment_card.dart';
+import '../models/transaction.dart';
+import '../logic/money.dart';
 
 class CardsScreen extends ConsumerWidget {
   const CardsScreen({super.key});
@@ -76,6 +78,7 @@ class CardsScreen extends ConsumerWidget {
                               fmt: fmt,
                               onEdit: () => _showEditCardSheet(context, ref, card),
                               onDelete: () => ref.read(paymentCardProvider.notifier).delete(card.id),
+                              onAdjust: () => _showAdjustBillSheet(context, ref, card, total),
                             );
                           },
                         ),
@@ -302,6 +305,65 @@ class CardsScreen extends ConsumerWidget {
       ),
     );
   }
+  void _showAdjustBillSheet(BuildContext context, WidgetRef ref, PaymentCard card, double currentTotal) {
+    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final newTotalCtrl = TextEditingController(text: currentTotal.toStringAsFixed(2).replaceAll('.', ','));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Corrigir fatura — ${card.name}', style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text('Fatura atual: ${fmt.format(currentTotal)}', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newTotalCtrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(labelText: 'Valor correto da fatura (R\$)', hintText: '0,00'),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'O app vai criar um ajuste para igualar a fatura ao valor informado.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                final newTotal = parseMoney(newTotalCtrl.text);
+                if (newTotal == null) return;
+                final diff = newTotal - currentTotal;
+                if (diff == 0) { Navigator.pop(ctx); return; }
+                ref.read(financeProvider.notifier).addTransaction(Transaction(
+                  id: const Uuid().v4(),
+                  description: diff > 0
+                      ? 'Ajuste fatura ${card.name} (+${fmt.format(diff.abs())})'
+                      : 'Ajuste fatura ${card.name} (-${fmt.format(diff.abs())})',
+                  amount: diff.abs(),
+                  type: diff > 0 ? TransactionType.expense : TransactionType.income,
+                  date: DateTime.now(),
+                  paymentMethod: PaymentMethod.credit,
+                  cardId: card.id,
+                ));
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              child: const Text('Corrigir fatura'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _CardTile extends StatelessWidget {
@@ -311,6 +373,7 @@ class _CardTile extends StatelessWidget {
   final NumberFormat fmt;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onAdjust;
 
   const _CardTile({
     required this.card,
@@ -319,6 +382,7 @@ class _CardTile extends StatelessWidget {
     required this.fmt,
     required this.onEdit,
     required this.onDelete,
+    required this.onAdjust,
   });
 
   @override
@@ -398,13 +462,22 @@ class _CardTile extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Fatura atual', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                      const SizedBox(height: 2),
-                      Text(fmt.format(cycleTotal), style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
-                    ],
+                  child: GestureDetector(
+                    onTap: onAdjust,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text('Fatura atual', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                            const SizedBox(width: 6),
+                            Icon(Icons.edit_rounded, color: color.withOpacity(0.5), size: 13),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(fmt.format(cycleTotal), style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
                 ),
                 Container(

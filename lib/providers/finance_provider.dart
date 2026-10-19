@@ -79,6 +79,11 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     await load();
   }
 
+  Future<void> updateTransaction(Transaction t) async {
+    await DatabaseHelper.instance.updateTransaction(t);
+    await load();
+  }
+
   Future<void> deleteTransaction(String id) async {
     await DatabaseHelper.instance.deleteTransaction(id);
     await load();

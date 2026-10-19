@@ -312,56 +312,141 @@ class _TransactionsTab extends ConsumerWidget {
             ),
           ),
           onDismissed: (_) => ref.read(financeProvider.notifier).deleteTransaction(t.id),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38, height: 38,
-                  decoration: BoxDecoration(
-                    color: (isIncome ? AppColors.success : AppColors.danger).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+          child: GestureDetector(
+            onTap: () => _showEditSheet(context, ref, t),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(
+                      color: (isIncome ? AppColors.success : AppColors.danger).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                      color: isIncome ? AppColors.success : AppColors.danger,
+                      size: 18,
+                    ),
                   ),
-                  child: Icon(
-                    isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                    color: isIncome ? AppColors.success : AppColors.danger,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(t.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
-                      Row(
-                        children: [
-                          Text(DateFormat('dd/MM/yyyy').format(t.date), style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                          if (t.paymentMethod == PaymentMethod.credit) ...[
-                            const SizedBox(width: 6),
-                            Icon(Icons.credit_card, color: AppColors.textMuted.withOpacity(0.6), size: 12),
-                            if (t.installments > 1) Text(' ${t.installmentNumber}/${t.installments}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+                        Row(
+                          children: [
+                            Text(DateFormat('dd/MM/yyyy').format(t.date), style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                            if (t.paymentMethod == PaymentMethod.credit) ...[
+                              const SizedBox(width: 6),
+                              Icon(Icons.credit_card, color: AppColors.textMuted.withOpacity(0.6), size: 12),
+                              if (t.installments > 1) Text(' ${t.installmentNumber}/${t.installments}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  '${isIncome ? '+' : '-'} ${fmt.format(t.amount)}',
-                  style: TextStyle(color: isIncome ? AppColors.success : AppColors.danger, fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ],
+                  Text(
+                    '${isIncome ? '+' : '-'} ${fmt.format(t.amount)}',
+                    style: TextStyle(color: isIncome ? AppColors.success : AppColors.danger, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  void _showEditSheet(BuildContext context, WidgetRef ref, Transaction t) {
+    final descCtrl = TextEditingController(text: t.description);
+    final amountCtrl = TextEditingController(text: t.amount.toStringAsFixed(2).replaceAll('.', ','));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Editar lançamento', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                IconButton(
+                  icon: const Icon(Icons.delete_rounded, color: AppColors.danger, size: 22),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    showDialog(
+                      context: context,
+                      builder: (dlg) => AlertDialog(
+                        backgroundColor: AppColors.surface,
+                        title: const Text('Apagar lançamento?', style: TextStyle(color: AppColors.textPrimary)),
+                        content: Text('${t.description} — ${fmt.format(t.amount)}', style: const TextStyle(color: AppColors.textSecondary)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(dlg), child: const Text('Cancelar')),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(dlg);
+                              ref.read(financeProvider.notifier).deleteTransaction(t.id);
+                            },
+                            child: const Text('Apagar', style: TextStyle(color: AppColors.danger)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descCtrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(labelText: 'Descrição'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountCtrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(labelText: 'Valor (R\$)'),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${t.type == TransactionType.income ? "Receita" : "Despesa"} · ${DateFormat('dd/MM/yyyy').format(t.date)}',
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                final amount = parseMoney(amountCtrl.text);
+                if (descCtrl.text.trim().isEmpty || amount == null) return;
+                ref.read(financeProvider.notifier).updateTransaction(
+                  t.copyWith(description: descCtrl.text.trim(), amount: amount),
+                );
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              child: const Text('Salvar alterações'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
