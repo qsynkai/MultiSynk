@@ -458,6 +458,7 @@ class _FixedExpensesTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(fixedExpenseProvider);
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final now = DateTime.now();
 
     final personal = state.expenses.where((e) => e.scope == 'personal').toList();
     final studio   = state.expenses.where((e) => e.scope == 'studio').toList();
@@ -508,12 +509,12 @@ class _FixedExpensesTab extends ConsumerWidget {
               children: [
                 if (personal.isNotEmpty) ...[
                   _SectionLabel(label: 'Casa / Pessoal', total: personal.where((e) => e.isActive).fold(0.0, (s, e) => s + e.amount), fmt: fmt),
-                  ...personal.map((e) => _FixedTile(expense: e, fmt: fmt, ref: ref)),
+                  ...personal.map((e) => _FixedTile(expense: e, fmt: fmt, ref: ref, isPaidThisMonth: state.isPaid(e.id, now.year, now.month))),
                   const SizedBox(height: 16),
                 ],
                 if (studio.isNotEmpty) ...[
                   _SectionLabel(label: 'Studio', total: studio.where((e) => e.isActive).fold(0.0, (s, e) => s + e.amount), fmt: fmt),
-                  ...studio.map((e) => _FixedTile(expense: e, fmt: fmt, ref: ref)),
+                  ...studio.map((e) => _FixedTile(expense: e, fmt: fmt, ref: ref, isPaidThisMonth: state.isPaid(e.id, now.year, now.month))),
                 ],
                 const SizedBox(height: 24),
               ],
@@ -660,10 +661,12 @@ class _FixedTile extends StatelessWidget {
   final FixedExpense expense;
   final NumberFormat fmt;
   final WidgetRef ref;
-  const _FixedTile({required this.expense, required this.fmt, required this.ref});
+  final bool isPaidThisMonth;
+  const _FixedTile({required this.expense, required this.fmt, required this.ref, required this.isPaidThisMonth});
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -674,17 +677,25 @@ class _FixedTile extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // "Pago este mês" toggle
           GestureDetector(
-            onTap: () => ref.read(fixedExpenseProvider.notifier).toggle(expense.id),
-            child: Container(
-              width: 24, height: 24,
+            onTap: () {
+              if (isPaidThisMonth) {
+                ref.read(fixedExpenseProvider.notifier).unmarkPaid(expense.id, now.year, now.month);
+              } else {
+                ref.read(fixedExpenseProvider.notifier).markPaid(expense.id, now.year, now.month);
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 26, height: 26,
               decoration: BoxDecoration(
-                color: expense.isActive ? AppColors.primary.withOpacity(0.2) : AppColors.surfaceLight,
+                color: isPaidThisMonth ? AppColors.success.withOpacity(0.15) : AppColors.surfaceLight,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: expense.isActive ? AppColors.primary : AppColors.surfaceBorder),
+                border: Border.all(color: isPaidThisMonth ? AppColors.success : AppColors.surfaceBorder),
               ),
-              child: expense.isActive
-                  ? const Icon(Icons.check_rounded, size: 14, color: AppColors.primary)
+              child: isPaidThisMonth
+                  ? const Icon(Icons.check_rounded, size: 14, color: AppColors.success)
                   : null,
             ),
           ),
@@ -695,21 +706,44 @@ class _FixedTile extends StatelessWidget {
               children: [
                 Text(expense.description,
                     style: TextStyle(
-                        color: expense.isActive ? AppColors.textPrimary : AppColors.textMuted,
+                        color: expense.isActive ? (isPaidThisMonth ? AppColors.textMuted : AppColors.textPrimary) : AppColors.textMuted,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        decoration: expense.isActive ? null : TextDecoration.lineThrough)),
-                if (expense.dueDay > 0)
-                  Text('Vence dia ${expense.dueDay}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                        decoration: (isPaidThisMonth || !expense.isActive) ? TextDecoration.lineThrough : null)),
+                Row(
+                  children: [
+                    if (expense.dueDay > 0)
+                      Text('Vence dia ${expense.dueDay}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    if (!expense.isActive) ...[
+                      if (expense.dueDay > 0) const Text(' · ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      const Text('Inativa', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    ],
+                    if (isPaidThisMonth) ...[
+                      if (expense.dueDay > 0) const Text(' · ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      const Text('Pago', style: TextStyle(color: AppColors.success, fontSize: 11)),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
           Text(fmt.format(expense.amount),
               style: TextStyle(
-                  color: expense.isActive ? AppColors.danger : AppColors.textMuted,
+                  color: isPaidThisMonth ? AppColors.textMuted : (expense.isActive ? AppColors.danger : AppColors.textMuted),
                   fontSize: 14,
-                  fontWeight: FontWeight.w600)),
+                  fontWeight: FontWeight.w600,
+                  decoration: isPaidThisMonth ? TextDecoration.lineThrough : null)),
           const SizedBox(width: 8),
+          // Active/inactive toggle
+          GestureDetector(
+            onTap: () => ref.read(fixedExpenseProvider.notifier).toggle(expense.id),
+            child: Icon(
+              expense.isActive ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+              color: expense.isActive ? AppColors.textMuted : AppColors.surfaceBorder,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 6),
           GestureDetector(
             onTap: () => ref.read(fixedExpenseProvider.notifier).delete(expense.id),
             child: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 18),
@@ -805,10 +839,15 @@ class _ReceivablesTab extends ConsumerWidget {
                             children: [
                               Text(fmt.format(r.amountToReceive),
                                   style: TextStyle(color: received ? AppColors.textMuted : AppColors.success, fontSize: 14, fontWeight: FontWeight.w600)),
-                              if (!received)
+                              if (received)
                                 GestureDetector(
-                                  onTap: () => ref.read(financeProvider.notifier).markReceivableReceived(r),
-                                  child: const Text('Recebido', style: TextStyle(color: AppColors.accent, fontSize: 11)),
+                                  onTap: () => _confirmUndo(context, ref, r),
+                                  child: const Text('Desfazer', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                                )
+                              else
+                                GestureDetector(
+                                  onTap: () => _confirmReceived(context, ref, r),
+                                  child: const Text('Recebido', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.w600)),
                                 ),
                             ],
                           ),
@@ -819,6 +858,56 @@ class _ReceivablesTab extends ConsumerWidget {
                 ),
         ),
       ],
+    );
+  }
+
+  void _confirmReceived(BuildContext context, WidgetRef ref, Receivable r) {
+    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Confirmar recebimento', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: Text(
+          'Marcar "${r.description}" como recebido?\n\nUma receita de ${fmt.format(r.expectedAmount)} será lançada automaticamente em Finanças.',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(financeProvider.notifier).markReceivableReceived(r);
+            },
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmUndo(BuildContext context, WidgetRef ref, Receivable r) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Desfazer recebimento', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: Text(
+          'Reverter "${r.description}" para pendente? A receita lançada automaticamente será removida.',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(financeProvider.notifier).unmarkReceivableReceived(r);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Desfazer'),
+          ),
+        ],
+      ),
     );
   }
 

@@ -49,6 +49,7 @@ BudgetSnapshot computeBudget({
   required List<Transaction> transactions,
   required List<Receivable> receivables,
   required List<FixedExpense> personalFixed,
+  Set<String> paidFixedExpenseIds = const {},
   double fiorinoMonthAvailable = 0,
   double studioMonthProlabore = 0,
 }) {
@@ -62,10 +63,8 @@ BudgetSnapshot computeBudget({
   double monthIncome = fiorinoMonthAvailable + studioMonthProlabore;
   double monthExpenses = 0;
   double weekSpent = 0;
-  final appliedIds = <String>{};
 
   for (final t in transactions) {
-    appliedIds.add(t.id);
     if (!_inMonth(t.date, now)) continue;
     if (t.type == TransactionType.income) {
       monthIncome += t.amount;
@@ -76,12 +75,17 @@ BudgetSnapshot computeBudget({
     }
   }
 
+  // Only receivables due this month or earlier that haven't been received yet
   final receivablesDue = receivables
-      .where((r) => r.status != ReceivableStatus.received && r.expectedDate.isBefore(nextMonthStart))
+      .where((r) =>
+          r.status != ReceivableStatus.received &&
+          r.expectedDate.year == now.year &&
+          r.expectedDate.month == now.month)
       .fold(0.0, (s, r) => s + r.amountToReceive);
 
+  // pendingFixed: active personal fixed expenses NOT yet marked paid this month
   final pendingFixed = personalFixed
-      .where((fe) => fe.isActive && !appliedIds.contains(fixedExpenseTransactionId(fe.id, now)))
+      .where((fe) => fe.isActive && !paidFixedExpenseIds.contains(fe.id))
       .fold(0.0, (s, fe) => s + fe.amount);
 
   return BudgetSnapshot(

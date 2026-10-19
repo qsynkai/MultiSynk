@@ -21,6 +21,7 @@ import 'screens/vehicles_screen.dart';
 import 'screens/tasks_screen.dart';
 import 'screens/studio_screen.dart';
 import 'screens/cards_screen.dart';
+import 'screens/planning_screen.dart';
 
 class MultiSynkApp extends ConsumerStatefulWidget {
   const MultiSynkApp({super.key});
@@ -87,7 +88,7 @@ class _MultiSynkAppState extends ConsumerState<MultiSynkApp> with WidgetsBinding
     if (uri == null || !mounted) return;
     if (uri.host == 'tab') {
       final index = int.tryParse(uri.pathSegments.firstOrNull ?? '');
-      if (index != null && index >= 0 && index < _screens.length) {
+      if (index != null && index >= 0 && index < 7) {
         Navigator.of(context).popUntil((r) => r.isFirst);
         setState(() => _currentIndex = index);
       }
@@ -100,6 +101,7 @@ class _MultiSynkAppState extends ConsumerState<MultiSynkApp> with WidgetsBinding
     HomeScreen(),
     FinanceScreen(),
     CardsScreen(),
+    PlanningScreen(),
     VehiclesScreen(),
     TasksScreen(),
     StudioScreen(),
@@ -128,9 +130,10 @@ class _MultiSynkAppState extends ConsumerState<MultiSynkApp> with WidgetsBinding
               _NavItem(icon: Icons.home_rounded, label: 'Início', index: 0, current: _currentIndex, onTap: _onTap),
               _NavItem(icon: Icons.account_balance_wallet_rounded, label: 'Finanças', index: 1, current: _currentIndex, onTap: _onTap),
               _NavItem(icon: Icons.credit_card_rounded, label: 'Cartões', index: 2, current: _currentIndex, onTap: _onTap),
-              _NavItem(icon: Icons.directions_car_rounded, label: 'Garagem', index: 3, current: _currentIndex, onTap: _onTap),
-              _NavItem(icon: Icons.checklist_rounded, label: 'Tarefas', index: 4, current: _currentIndex, onTap: _onTap),
-              _NavItem(icon: Icons.spa_rounded, label: 'Studio', index: 5, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.calendar_month_rounded, label: 'Planejar', index: 3, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.directions_car_rounded, label: 'Garagem', index: 4, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.checklist_rounded, label: 'Tarefas', index: 5, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.spa_rounded, label: 'Studio', index: 6, current: _currentIndex, onTap: _onTap),
             ],
           ),
         ),

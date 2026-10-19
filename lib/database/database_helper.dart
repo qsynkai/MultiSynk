@@ -11,6 +11,8 @@ import '../models/fiorino_entry.dart';
 import '../models/studio_entry.dart';
 import '../models/studio_config.dart';
 import '../models/fixed_expense.dart';
+import '../models/fixed_expense_payment.dart';
+import '../models/card_bill_payment.dart';
 import '../models/payment_card.dart';
 import '../models/shopping_item.dart';
 
@@ -32,7 +34,9 @@ const syncTables = <SyncTableSpec>[
   SyncTableSpec('studio_entries'),
   SyncTableSpec('studio_config', 'key'),
   SyncTableSpec('fixed_expenses'),
+  SyncTableSpec('fixed_expense_payments'),
   SyncTableSpec('payment_cards'),
+  SyncTableSpec('card_bill_payments'),
   SyncTableSpec('shopping_items'),
 ];
 
@@ -54,7 +58,7 @@ const _seedVehicles = [
 ];
 
 class DatabaseHelper {
-  static const schemaVersion = 10;
+  static const schemaVersion = 11;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   DatabaseHelper._internal()
@@ -211,6 +215,39 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE fixed_expenses ADD COLUMN card_id TEXT');
       }
     }
+    if (oldVersion < 11) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS fixed_expense_payments(
+          id TEXT PRIMARY KEY,
+          fixed_expense_id TEXT NOT NULL,
+          year INTEGER NOT NULL,
+          month INTEGER NOT NULL,
+          paid_at TEXT NOT NULL,
+          updated_at INTEGER NOT NULL DEFAULT 0,
+          dirty INTEGER NOT NULL DEFAULT 1,
+          UNIQUE(fixed_expense_id, year, month)
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS card_bill_payments(
+          id TEXT PRIMARY KEY,
+          card_id TEXT NOT NULL,
+          year INTEGER NOT NULL,
+          month INTEGER NOT NULL,
+          amount REAL,
+          paid_at TEXT NOT NULL,
+          updated_at INTEGER NOT NULL DEFAULT 0,
+          dirty INTEGER NOT NULL DEFAULT 1,
+          UNIQUE(card_id, year, month)
+        )
+      ''');
+      if (!await _hasColumn(db, 'transactions', 'studio_entry_id')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN studio_entry_id TEXT');
+      }
+      if (!await _hasColumn(db, 'receivables', 'linked_transaction_id')) {
+        await db.execute('ALTER TABLE receivables ADD COLUMN linked_transaction_id TEXT');
+      }
+    }
   }
 
   Future<bool> _hasColumn(DatabaseExecutor db, String table, String column) async {
@@ -267,7 +304,8 @@ class DatabaseHelper {
         card_id TEXT,
         installments INTEGER NOT NULL DEFAULT 1,
         installment_number INTEGER NOT NULL DEFAULT 1,
-        installment_group_id TEXT
+        installment_group_id TEXT,
+        studio_entry_id TEXT
       )
     ''');
 
@@ -321,7 +359,8 @@ class DatabaseHelper {
         received_amount REAL,
         expected_date TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
-        is_recurring INTEGER NOT NULL DEFAULT 0
+        is_recurring INTEGER NOT NULL DEFAULT 0,
+        linked_transaction_id TEXT
       )
     ''');
 
@@ -393,6 +432,29 @@ class DatabaseHelper {
         closing_day INTEGER NOT NULL DEFAULT 1,
         due_day INTEGER NOT NULL DEFAULT 10,
         color TEXT NOT NULL DEFAULT '#7C3AED'
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE fixed_expense_payments(
+        id TEXT PRIMARY KEY,
+        fixed_expense_id TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        paid_at TEXT NOT NULL,
+        UNIQUE(fixed_expense_id, year, month)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE card_bill_payments(
+        id TEXT PRIMARY KEY,
+        card_id TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        amount REAL,
+        paid_at TEXT NOT NULL,
+        UNIQUE(card_id, year, month)
       )
     ''');
 
@@ -570,7 +632,13 @@ class DatabaseHelper {
     return maps.map(StudioEntry.fromMap).toList();
   }
 
-  Future<void> deleteStudioEntry(String id) => _remove('studio_entries', [id]);
+  Future<void> deleteStudioEntry(String id) async {
+    final db = await database;
+    // Cascade: delete any mirrored Finance transactions linked to this studio entry
+    final linked = await db.query('transactions', columns: ['id'], where: 'studio_entry_id = ?', whereArgs: [id]);
+    await _remove('transactions', [for (final r in linked) r['id'] as String]);
+    await _remove('studio_entries', [id]);
+  }
 
   Future<StudioConfig> getStudioConfig() async {
     final db = await database;
@@ -605,7 +673,79 @@ class DatabaseHelper {
 
   Future<void> updatePaymentCard(PaymentCard card) => _put('payment_cards', card.toMap());
 
-  Future<void> deletePaymentCard(String id) => _remove('payment_cards', [id]);
+  Future<void> deletePaymentCard(String id) async {
+    final db = await database;
+    // Nullify card_id on linked transactions (preserve history, just unlink the card)
+    await db.update('transactions', {'card_id': null, 'dirty': 1, 'updated_at': _clock()},
+        where: 'card_id = ?', whereArgs: [id]);
+    // Remove card bill payments for this card
+    final billIds = await db.query('card_bill_payments', columns: ['id'], where: 'card_id = ?', whereArgs: [id]);
+    await _remove('card_bill_payments', [for (final r in billIds) r['id'] as String]);
+    await _remove('payment_cards', [id]);
+  }
+
+  // ── Fixed expense payments ───────────────────────────────────────────────────
+  Future<List<FixedExpensePayment>> getFixedExpensePayments({int? year, int? month}) async {
+    final db = await database;
+    if (year != null && month != null) {
+      final maps = await db.query('fixed_expense_payments',
+          where: 'year = ? AND month = ?', whereArgs: [year, month]);
+      return maps.map(FixedExpensePayment.fromMap).toList();
+    }
+    final maps = await db.query('fixed_expense_payments');
+    return maps.map(FixedExpensePayment.fromMap).toList();
+  }
+
+  Future<void> upsertFixedExpensePayment(FixedExpensePayment p) async {
+    final db = await database;
+    // Delete any existing record for the same (fixed_expense_id, year, month) first
+    await db.delete('fixed_expense_payments',
+        where: 'fixed_expense_id = ? AND year = ? AND month = ?',
+        whereArgs: [p.fixedExpenseId, p.year, p.month]);
+    await _put('fixed_expense_payments', p.toMap());
+  }
+
+  Future<void> deleteFixedExpensePayment(String fixedExpenseId, int year, int month) async {
+    final db = await database;
+    final rows = await db.query('fixed_expense_payments',
+        columns: ['id'],
+        where: 'fixed_expense_id = ? AND year = ? AND month = ?',
+        whereArgs: [fixedExpenseId, year, month]);
+    if (rows.isNotEmpty) {
+      await _remove('fixed_expense_payments', [rows.first['id'] as String]);
+    }
+  }
+
+  // ── Card bill payments ───────────────────────────────────────────────────────
+  Future<List<CardBillPayment>> getCardBillPayments({int? year, int? month}) async {
+    final db = await database;
+    if (year != null && month != null) {
+      final maps = await db.query('card_bill_payments',
+          where: 'year = ? AND month = ?', whereArgs: [year, month]);
+      return maps.map(CardBillPayment.fromMap).toList();
+    }
+    final maps = await db.query('card_bill_payments');
+    return maps.map(CardBillPayment.fromMap).toList();
+  }
+
+  Future<void> upsertCardBillPayment(CardBillPayment p) async {
+    final db = await database;
+    await db.delete('card_bill_payments',
+        where: 'card_id = ? AND year = ? AND month = ?',
+        whereArgs: [p.cardId, p.year, p.month]);
+    await _put('card_bill_payments', p.toMap());
+  }
+
+  Future<void> deleteCardBillPayment(String cardId, int year, int month) async {
+    final db = await database;
+    final rows = await db.query('card_bill_payments',
+        columns: ['id'],
+        where: 'card_id = ? AND year = ? AND month = ?',
+        whereArgs: [cardId, year, month]);
+    if (rows.isNotEmpty) {
+      await _remove('card_bill_payments', [rows.first['id'] as String]);
+    }
+  }
 
   // ── Shopping items ──────────────────────────────────────────────────────────
   Future<List<ShoppingItem>> getShoppingItems() async {

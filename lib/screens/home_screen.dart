@@ -155,11 +155,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
     // Renda combinada: Finance (pessoal) + Fiorino disponível + pró-labore do Studio
+    final now = DateTime.now();
     final budget = computeBudget(
-      now: DateTime.now(),
+      now: now,
       transactions: finance.transactions,
       receivables: finance.receivables,
       personalFixed: fixedState.personalExpenses,
+      paidFixedExpenseIds: fixedState.paidIds(now.year, now.month),
       fiorinoMonthAvailable: fiorino.monthAvailable,
       studioMonthProlabore: studio.monthProlabore,
     );

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/transaction.dart';
 import '../models/receivable.dart';
@@ -94,15 +95,36 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     await load();
   }
 
+  /// Marks the receivable as received AND creates a corresponding income Transaction.
   Future<void> markReceivableReceived(Receivable r) async {
-    final updated = Receivable(
-      id: r.id,
+    final txId = const Uuid().v4();
+    final tx = Transaction(
+      id: txId,
       description: r.description,
-      expectedAmount: r.expectedAmount,
-      receivedAmount: r.expectedAmount,
-      expectedDate: r.expectedDate,
+      amount: r.expectedAmount,
+      type: TransactionType.income,
+      date: DateTime.now(),
+      category: 'recebimento',
+    );
+    await DatabaseHelper.instance.insertTransaction(tx);
+    final updated = r.copyWith(
       status: ReceivableStatus.received,
-      isRecurring: r.isRecurring,
+      receivedAmount: r.expectedAmount,
+      linkedTransactionId: txId,
+    );
+    await DatabaseHelper.instance.updateReceivable(updated);
+    await load();
+  }
+
+  /// Reverts a received receivable back to pending and deletes the linked income Transaction.
+  Future<void> unmarkReceivableReceived(Receivable r) async {
+    if (r.linkedTransactionId != null) {
+      await DatabaseHelper.instance.deleteTransaction(r.linkedTransactionId!);
+    }
+    final updated = r.copyWith(
+      status: ReceivableStatus.pending,
+      receivedAmount: 0,
+      clearLinkedTransaction: true,
     );
     await DatabaseHelper.instance.updateReceivable(updated);
     await load();

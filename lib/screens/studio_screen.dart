@@ -708,7 +708,9 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
                                 ? '${descCtrl.text.trim()} (${i + 1}/$count)'
                                 : descCtrl.text.trim();
 
+                        final entryId = const Uuid().v4();
                         ref.read(studioProvider.notifier).addEntry(
+                          id: entryId,
                           amount: parts[i],
                           type: type,
                           description: desc,
@@ -736,6 +738,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
                               installments: count,
                               installmentNumber: i + 1,
                               installmentGroupId: groupId,
+                              studioEntryId: entryId,
                             ),
                           );
                         }
@@ -1633,6 +1636,81 @@ class _EntryList extends ConsumerWidget {
 
   const _EntryList({required this.entries, required this.fmt});
 
+  void _showEditEntry(BuildContext context, WidgetRef ref, StudioEntry entry) {
+    final descCtrl = TextEditingController(text: entry.description);
+    final amountCtrl = TextEditingController(text: entry.amount.toStringAsFixed(2).replaceAll('.', ','));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Editar ${entry.isRevenue ? "receita" : "despesa"}',
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descCtrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(labelText: 'Descrição'),
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountCtrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(labelText: 'Valor (R\$)'),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                final rawAmount = amountCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+                final amount = double.tryParse(rawAmount);
+                if (descCtrl.text.isEmpty || amount == null || amount <= 0) return;
+                // Rebuild entry with updated fields
+                ref.read(studioProvider.notifier).deleteEntry(entry.id);
+                ref.read(studioProvider.notifier).addEntry(
+                  id: entry.id,
+                  amount: amount,
+                  type: entry.type,
+                  description: descCtrl.text.trim(),
+                  category: entry.category,
+                  date: entry.date,
+                  notes: entry.notes,
+                  paymentMethod: entry.paymentMethod,
+                  cardId: entry.cardId,
+                  installments: entry.installments,
+                  installmentNumber: entry.installmentNumber,
+                  installmentGroupId: entry.installmentGroupId,
+                );
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (entries.isEmpty) {
@@ -1652,6 +1730,27 @@ class _EntryList extends ConsumerWidget {
         return Dismissible(
           key: Key(entry.id),
           direction: DismissDirection.endToStart,
+          confirmDismiss: (_) async {
+            return await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: AppColors.surface,
+                title: const Text('Excluir entrada', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+                content: Text(
+                  'Excluir "${entry.description}"?\n${entry.cardId != null ? '\nIsso também removerá o lançamento vinculado em Finanças/Cartão.' : ''}',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                    child: const Text('Excluir'),
+                  ),
+                ],
+              ),
+            ) ?? false;
+          },
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
@@ -1663,53 +1762,56 @@ class _EntryList extends ConsumerWidget {
             child: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
           ),
           onDismissed: (_) => ref.read(studioProvider.notifier).deleteEntry(entry.id),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
+          child: GestureDetector(
+            onTap: () => _showEditEntry(context, ref, entry),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isRevenue ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                      color: color, size: 18,
+                    ),
                   ),
-                  child: Icon(
-                    isRevenue ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                    color: color, size: 18,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(entry.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
-                      Row(
-                        children: [
-                          Text(
-                            DateFormat('dd/MM/yyyy').format(entry.date),
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-                          ),
-                          if (entry.category != null) ...[
-                            const Text(' · ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                            Text(entry.category!, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(entry.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+                        Row(
+                          children: [
+                            Text(
+                              DateFormat('dd/MM/yyyy').format(entry.date),
+                              style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            ),
+                            if (entry.category != null) ...[
+                              const Text(' · ', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                              Text(entry.category!, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  '${isRevenue ? '+' : '-'}${fmt.format(entry.amount)}',
-                  style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w700),
-                ),
-              ],
+                  Text(
+                    '${isRevenue ? '+' : '-'}${fmt.format(entry.amount)}',
+                    style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
           ),
         );

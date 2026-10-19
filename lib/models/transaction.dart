@@ -17,6 +17,7 @@ class Transaction {
   final int installments;
   final int installmentNumber;
   final String? installmentGroupId;
+  final String? studioEntryId;
 
   const Transaction({
     required this.id,
@@ -31,6 +32,7 @@ class Transaction {
     this.installments = 1,
     this.installmentNumber = 1,
     this.installmentGroupId,
+    this.studioEntryId,
   });
 
   bool get isInstallment => installments > 1;
@@ -48,6 +50,7 @@ class Transaction {
     'installments': installments,
     'installment_number': installmentNumber,
     'installment_group_id': installmentGroupId,
+    'studio_entry_id': studioEntryId,
   };
 
   factory Transaction.fromMap(Map<String, dynamic> map) => Transaction(
@@ -63,6 +66,7 @@ class Transaction {
     installments: asInt(map['installments'], 1),
     installmentNumber: asInt(map['installment_number'], 1),
     installmentGroupId: map['installment_group_id'] as String?,
+    studioEntryId: map['studio_entry_id'] as String?,
   );
 
   Transaction copyWith({
@@ -77,6 +81,7 @@ class Transaction {
     int? installments,
     int? installmentNumber,
     String? installmentGroupId,
+    String? studioEntryId,
   }) => Transaction(
     id: id,
     description: description ?? this.description,
@@ -90,5 +95,6 @@ class Transaction {
     installments: installments ?? this.installments,
     installmentNumber: installmentNumber ?? this.installmentNumber,
     installmentGroupId: installmentGroupId ?? this.installmentGroupId,
+    studioEntryId: studioEntryId ?? this.studioEntryId,
   );
 }
