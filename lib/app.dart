@@ -117,20 +117,21 @@ class _MultiSynkAppState extends ConsumerState<MultiSynkApp> with WidgetsBinding
           color: AppColors.surface,
           border: Border(top: BorderSide(color: AppColors.surfaceBorder, width: 0.5)),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(icon: Icons.home_rounded, label: 'Início', index: 0, current: _currentIndex, onTap: _onTap),
-                _NavItem(icon: Icons.account_balance_wallet_rounded, label: 'Finanças', index: 1, current: _currentIndex, onTap: _onTap),
-                _NavItem(icon: Icons.credit_card_rounded, label: 'Cartões', index: 2, current: _currentIndex, onTap: _onTap),
-                _NavItem(icon: Icons.directions_car_rounded, label: 'Garagem', index: 3, current: _currentIndex, onTap: _onTap),
-                _NavItem(icon: Icons.checklist_rounded, label: 'Tarefas', index: 4, current: _currentIndex, onTap: _onTap),
-                _NavItem(icon: Icons.spa_rounded, label: 'Studio', index: 5, current: _currentIndex, onTap: _onTap),
-              ],
-            ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom,
+            top: 4,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(icon: Icons.home_rounded, label: 'Início', index: 0, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.account_balance_wallet_rounded, label: 'Finanças', index: 1, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.credit_card_rounded, label: 'Cartões', index: 2, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.directions_car_rounded, label: 'Garagem', index: 3, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.checklist_rounded, label: 'Tarefas', index: 4, current: _currentIndex, onTap: _onTap),
+              _NavItem(icon: Icons.spa_rounded, label: 'Studio', index: 5, current: _currentIndex, onTap: _onTap),
+            ],
           ),
         ),
       ),
