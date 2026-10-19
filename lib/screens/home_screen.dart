@@ -1223,8 +1223,10 @@ class _FinancialPulseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final totalOwed = pendingFixed + cardTotal;
     final spent = monthExpenses;
-    final available = monthIncome - spent - pendingFixed;
-    final progress = monthIncome > 0 ? (spent / monthIncome).clamp(0.0, 1.0) : 0.0;
+    final totalIncome = monthIncome + receivables;
+    final available = totalIncome - spent - pendingFixed;
+    final progress = totalIncome > 0 ? (spent / totalIncome).clamp(0.0, 1.0) : 0.0;
+    final committed = totalIncome > 0 ? ((spent + pendingFixed) / totalIncome).clamp(0.0, 1.0) : 0.0;
 
     final Color statusColor;
     final IconData statusIcon;
@@ -1233,11 +1235,11 @@ class _FinancialPulseCard extends StatelessWidget {
     if (available <= 0) {
       statusColor = AppColors.danger;
       statusIcon = Icons.warning_rounded;
-      statusText = 'Orçamento estourado! Corte gastos ou aguarde receitas.';
-    } else if (progress > 0.8) {
+      statusText = 'Orçamento apertado! Gastos + contas superam a renda disponível.';
+    } else if (committed > 0.8) {
       statusColor = AppColors.warning;
       statusIcon = Icons.info_rounded;
-      statusText = 'Atenção: já usou ${(progress * 100).toInt()}% da renda. Restam ${fmt.format(available)} livres.';
+      statusText = '${(committed * 100).toInt()}% da renda já comprometida. Sobram ${fmt.format(available)} livres.';
     } else if (totalOwed > 0) {
       statusText = 'Falta pagar ${fmt.format(totalOwed)} em contas. Sobram ${fmt.format(available)} livres.';
       statusColor = AppColors.accent;
@@ -1284,9 +1286,9 @@ class _FinancialPulseCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              const Text('Gasto', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              const Text('Comprometido', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
               const Spacer(),
-              Text('${(progress * 100).toInt()}%', style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
+              Text('${(committed * 100).toInt()}%', style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 6),
@@ -1303,7 +1305,7 @@ class _FinancialPulseCard extends StatelessWidget {
                     ),
                   ),
                   FractionallySizedBox(
-                    widthFactor: progress,
+                    widthFactor: committed,
                     child: Container(
                       height: 8,
                       decoration: BoxDecoration(
