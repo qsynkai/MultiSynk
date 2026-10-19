@@ -94,6 +94,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(studioProvider);
+    final fixedState = ref.watch(fixedExpenseProvider);
     final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     final isSemana = _viewMode == 'semana';
 
@@ -106,6 +107,17 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
     final mProlabore = isSemana
         ? state.weekProlabore(_selectedWeekStart)
         : (mRevenue * state.config.availablePercent - mExpenses).clamp(0.0, double.infinity);
+
+    // Previous month for comparison
+    final prevMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
+    final prevEntries = state.entries.where((e) => e.date.year == prevMonth.year && e.date.month == prevMonth.month).toList();
+    final prevRevenue = prevEntries.where((e) => e.isRevenue).fold(0.0, (s, e) => s + e.amount);
+    final prevExpenses = prevEntries.where((e) => e.isExpense).fold(0.0, (s, e) => s + e.amount);
+    final prevProfit = prevRevenue - prevExpenses;
+
+    // Studio fixed expenses total
+    final studioFixed = fixedState.studioExpenses;
+    final totalStudioFixed = fixedState.studioTotal;
 
     final displayEntries = isSemana ? state.weekEntries(_selectedWeekStart) : monthEntries;
 
@@ -237,6 +249,37 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
                 child: _SummaryCards(revenue: mRevenue, expenses: mExpenses, profit: mProfit, month: _selectedMonth, fmt: fmt),
               ),
             ),
+
+            // Alert de fixas + insight mensal (só no modo Mês)
+            if (!isSemana) ...[
+              if (totalStudioFixed > 0)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                    child: _StudioFixedAlert(
+                      revenue: mRevenue,
+                      totalFixed: totalStudioFixed,
+                      fixedExpenses: studioFixed,
+                      paidIds: fixedState.paidIds(_selectedMonth.year, _selectedMonth.month),
+                      fmt: fmt,
+                    ),
+                  ),
+                ),
+              if (prevRevenue > 0 || prevProfit != 0)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                    child: _MonthInsightCard(
+                      currentRevenue: mRevenue,
+                      prevRevenue: prevRevenue,
+                      currentProfit: mProfit,
+                      prevProfit: prevProfit,
+                      prevMonth: prevMonth,
+                      fmt: fmt,
+                    ),
+                  ),
+                ),
+            ],
 
             // Cofrinhos
             SliverToBoxAdapter(
@@ -1816,6 +1859,290 @@ class _EntryList extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Alert de cobertura de fixas ────────────────────────────────────────────
+
+class _StudioFixedAlert extends StatelessWidget {
+  final double revenue;
+  final double totalFixed;
+  final List<FixedExpense> fixedExpenses;
+  final Set<String> paidIds;
+  final NumberFormat fmt;
+
+  const _StudioFixedAlert({
+    required this.revenue,
+    required this.totalFixed,
+    required this.fixedExpenses,
+    required this.paidIds,
+    required this.fmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pendingFixed = fixedExpenses.where((e) => !paidIds.contains(e.id)).toList();
+    final pendingTotal = pendingFixed.fold(0.0, (s, e) => s + e.amount);
+    final covered = revenue >= totalFixed;
+    final coveragePct = totalFixed > 0 ? (revenue / totalFixed).clamp(0.0, 1.0) : 1.0;
+    final color = covered ? AppColors.success : (coveragePct >= 0.7 ? AppColors.warning : AppColors.danger);
+    final missing = totalFixed - revenue;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                covered ? Icons.check_circle_rounded : Icons.warning_rounded,
+                color: color,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  covered
+                      ? 'Fixas cobertas pelo faturamento'
+                      : 'Faturamento insuficiente para as fixas',
+                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 6,
+              child: Row(
+                children: [
+                  Flexible(
+                    flex: (coveragePct * 100).round(),
+                    child: Container(color: color),
+                  ),
+                  if (!covered)
+                    Flexible(
+                      flex: ((1 - coveragePct) * 100).round(),
+                      child: Container(color: color.withOpacity(0.15)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _AlertStat(label: 'Total fixas', value: fmt.format(totalFixed), color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              if (!covered)
+                _AlertStat(label: 'Falta pagar', value: fmt.format(missing), color: AppColors.danger)
+              else
+                _AlertStat(label: 'Sobra', value: fmt.format(revenue - totalFixed), color: AppColors.success),
+              const SizedBox(width: 8),
+              _AlertStat(label: 'Pendentes', value: fmt.format(pendingTotal), color: pendingTotal > 0 ? AppColors.warning : AppColors.textMuted),
+            ],
+          ),
+          if (pendingFixed.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text('Contas pendentes este mês:', style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            ...pendingFixed.map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.circle, size: 5, color: AppColors.textMuted),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(e.description, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12))),
+                  Text(fmt.format(e.amount), style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            )),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AlertStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _AlertStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 9, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 2),
+            Text(value, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Insight de comparação mensal ───────────────────────────────────────────
+
+class _MonthInsightCard extends StatelessWidget {
+  final double currentRevenue;
+  final double prevRevenue;
+  final double currentProfit;
+  final double prevProfit;
+  final DateTime prevMonth;
+  final NumberFormat fmt;
+
+  const _MonthInsightCard({
+    required this.currentRevenue,
+    required this.prevRevenue,
+    required this.currentProfit,
+    required this.prevProfit,
+    required this.prevMonth,
+    required this.fmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final prevLabel = DateFormat('MMMM', 'pt_BR').format(prevMonth);
+    final revDelta = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue * 100) : null;
+    final profitDelta = prevProfit.abs() > 0 ? ((currentProfit - prevProfit) / prevProfit.abs() * 100) : null;
+    final revUp = (revDelta ?? 0) >= 0;
+    final revColor = revUp ? AppColors.success : AppColors.danger;
+
+    String insight;
+    if (currentRevenue == 0) {
+      insight = 'Nenhum faturamento registrado ainda este mês.';
+    } else if (prevRevenue == 0) {
+      insight = 'Primeiro mês com dados comparativos.';
+    } else if (revDelta != null && revDelta.abs() < 2) {
+      insight = 'Faturamento estável em relação a $prevLabel.';
+    } else if (revDelta != null && revUp) {
+      insight = 'Faturamento ${revDelta.toStringAsFixed(0)}% acima de $prevLabel — ótimo desempenho!';
+    } else if (revDelta != null) {
+      insight = 'Faturamento ${revDelta.abs().toStringAsFixed(0)}% abaixo de $prevLabel. Atenção às metas.';
+    } else {
+      insight = 'Comparando com $prevLabel.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights_rounded, color: _studioRose, size: 15),
+              const SizedBox(width: 8),
+              Text('vs. $prevLabel', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _InsightStat(
+                  label: 'Faturamento',
+                  current: fmt.format(currentRevenue),
+                  prev: fmt.format(prevRevenue),
+                  delta: revDelta,
+                  up: revUp,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _InsightStat(
+                  label: 'Lucro',
+                  current: fmt.format(currentProfit),
+                  prev: fmt.format(prevProfit),
+                  delta: profitDelta,
+                  up: (profitDelta ?? 0) >= 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: revColor.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(revUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: revColor, size: 14),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(insight, style: TextStyle(color: revColor, fontSize: 12, fontWeight: FontWeight.w500)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightStat extends StatelessWidget {
+  final String label;
+  final String current;
+  final String prev;
+  final double? delta;
+  final bool up;
+
+  const _InsightStat({required this.label, required this.current, required this.prev, required this.delta, required this.up});
+
+  @override
+  Widget build(BuildContext context) {
+    final deltaColor = up ? AppColors.success : AppColors.danger;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 3),
+          Text(current, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Text('ant: $prev', style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+              if (delta != null) ...[
+                const SizedBox(width: 4),
+                Icon(up ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 9, color: deltaColor),
+                Text('${delta!.abs().toStringAsFixed(0)}%', style: TextStyle(color: deltaColor, fontSize: 10, fontWeight: FontWeight.w600)),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
