@@ -20,6 +20,7 @@ import '../services/widget_service.dart';
 import '../logic/budget.dart';
 import 'auth_screen.dart';
 import 'household_screen.dart';
+import 'login_screen.dart';
 import 'fiorino_screen.dart';
 import 'studio_screen.dart';
 import 'cards_screen.dart';
@@ -265,15 +266,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+                    GestureDetector(
+                      onTap: () => LoginScreen.logout(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+                        ),
+                        child: const Icon(Icons.logout_rounded, color: AppColors.textSecondary, size: 20),
                       ),
-                      child: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary, size: 20),
                     ),
                   ],
                 ),

@@ -6,6 +6,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
 import 'app.dart';
+import 'screens/login_screen.dart';
 import 'services/supabase_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -34,13 +35,15 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
+  final loggedUser = await LoginScreen.loggedUser();
+
   runApp(
     ProviderScope(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'MultiSynk',
         theme: buildTheme(),
-        home: const MultiSynkApp(),
+        home: loggedUser != null ? const MultiSynkApp() : const LoginScreen(),
       ),
     ),
   );
