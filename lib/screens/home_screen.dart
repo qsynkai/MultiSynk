@@ -523,12 +523,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
 
 
-            // Contas a pagar — contagem regressiva
+            // A receber — contagem regressiva
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: const Text(
-                  'Contas a pagar',
+                  'A receber',
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
