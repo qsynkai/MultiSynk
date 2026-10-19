@@ -107,259 +107,271 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
             // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: _studioRose.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.spa_rounded, color: _studioRose, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Ferretti Studio Beauty', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-                        Text('Dashboard do estúdio', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _showStudioConfigSheet(context, state),
-                    child: Container(
-                      width: 40, height: 40,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+                        color: _studioRose.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.tune_rounded, color: AppColors.textSecondary, size: 18),
+                      child: const Icon(Icons.spa_rounded, color: _studioRose, size: 22),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Ferretti Studio Beauty', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+                          Text('Dashboard do estúdio', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _showStudioConfigSheet(context, state),
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+                        ),
+                        child: const Icon(Icons.tune_rounded, color: AppColors.textSecondary, size: 18),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
             // Toggle Semana / Mês
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _ViewToggle(
-                selected: _viewMode,
-                onChanged: (v) => setState(() => _viewMode = v),
-                color: _studioRose,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: _ViewToggle(
+                  selected: _viewMode,
+                  onChanged: (v) => setState(() => _viewMode = v),
+                  color: _studioRose,
+                ),
               ),
             ),
 
             // Navegador semana ou mês
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: isSemana
-                  ? _WeekNavigator(
-                      label: _weekLabel,
-                      onPrev: _prevWeek,
-                      onNext: _isCurrentWeek ? null : _nextWeek,
-                      color: _studioRose,
-                    )
-                  : Row(
-                      children: [
-                        GestureDetector(
-                          onTap: _prevMonth,
-                          child: Container(
-                            width: 34, height: 34,
-                            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.surfaceBorder, width: 0.5)),
-                            child: const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary, size: 20),
-                          ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              DateFormat('MMMM yyyy', 'pt_BR').format(_selectedMonth).toUpperCase(),
-                              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: isSemana
+                    ? _WeekNavigator(
+                        label: _weekLabel,
+                        onPrev: _prevWeek,
+                        onNext: _isCurrentWeek ? null : _nextWeek,
+                        color: _studioRose,
+                      )
+                    : Row(
+                        children: [
+                          GestureDetector(
+                            onTap: _prevMonth,
+                            child: Container(
+                              width: 34, height: 34,
+                              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.surfaceBorder, width: 0.5)),
+                              child: const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary, size: 20),
                             ),
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: _isCurrentMonth ? null : _nextMonth,
-                          child: Container(
-                            width: 34, height: 34,
-                            decoration: BoxDecoration(
-                              color: _isCurrentMonth ? AppColors.surface.withOpacity(0.4) : AppColors.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                DateFormat('MMMM yyyy', 'pt_BR').format(_selectedMonth).toUpperCase(),
+                                style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6),
+                              ),
                             ),
-                            child: Icon(Icons.chevron_right_rounded, color: _isCurrentMonth ? AppColors.textMuted : AppColors.textSecondary, size: 20),
                           ),
-                        ),
-                      ],
-                    ),
+                          GestureDetector(
+                            onTap: _isCurrentMonth ? null : _nextMonth,
+                            child: Container(
+                              width: 34, height: 34,
+                              decoration: BoxDecoration(
+                                color: _isCurrentMonth ? AppColors.surface.withOpacity(0.4) : AppColors.surface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
+                              ),
+                              child: Icon(Icons.chevron_right_rounded, color: _isCurrentMonth ? AppColors.textMuted : AppColors.textSecondary, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
 
             // Banner de domingo
             if (isSemana && _isCurrentWeek && _isSunday)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: _SundayBanner(
-                  safety: mSafety,
-                  maintenance: mSavings,
-                  fuel: mProlabore,
-                  available: mProlabore,
-                  fmt: fmt,
-                  color: _studioRose,
-                  labels: const ['Segurança', 'Poupança', 'Pró-labore'],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: _SundayBanner(
+                    safety: mSafety,
+                    maintenance: mSavings,
+                    fuel: mProlabore,
+                    available: mProlabore,
+                    fmt: fmt,
+                    color: _studioRose,
+                    labels: const ['Segurança', 'Poupança', 'Pró-labore'],
+                  ),
                 ),
               ),
 
             // Cards de resumo
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: _SummaryCards(revenue: mRevenue, expenses: mExpenses, profit: mProfit, month: _selectedMonth, fmt: fmt),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                child: _SummaryCards(revenue: mRevenue, expenses: mExpenses, profit: mProfit, month: _selectedMonth, fmt: fmt),
+              ),
             ),
 
             // Cofrinhos
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(isSemana ? 'Cofrinhos da semana' : 'Cofrinhos do mês', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(child: _StudioCofrinhoCard(
-                        icon: Icons.shield_rounded,
-                        label: 'Caixa de\nSegurança',
-                        value: fmt.format(mSafety),
-                        percent: (state.config.safetyPercent * 100).round(),
-                        color: const Color(0xFF4CAF50),
-                      )),
-                      const SizedBox(width: 8),
-                      Expanded(child: _StudioCofrinhoCard(
-                        icon: Icons.savings_rounded,
-                        label: 'Guardar /\nPoupança',
-                        value: fmt.format(mSavings),
-                        percent: (state.config.savingsPercent * 100).round(),
-                        color: const Color(0xFF9C27B0),
-                      )),
-                      const SizedBox(width: 8),
-                      Expanded(child: _StudioCofrinhoCard(
-                        icon: Icons.account_balance_wallet_rounded,
-                        label: 'Pró-labore',
-                        value: fmt.format(mProlabore),
-                        percent: (state.config.availablePercent * 100).round(),
-                        color: _studioRose,
-                      )),
-                    ],
-                  ),
-                ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isSemana ? 'Cofrinhos da semana' : 'Cofrinhos do mês', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: _StudioCofrinhoCard(
+                          icon: Icons.shield_rounded,
+                          label: 'Caixa de\nSegurança',
+                          value: fmt.format(mSafety),
+                          percent: (state.config.safetyPercent * 100).round(),
+                          color: const Color(0xFF4CAF50),
+                        )),
+                        const SizedBox(width: 8),
+                        Expanded(child: _StudioCofrinhoCard(
+                          icon: Icons.savings_rounded,
+                          label: 'Guardar /\nPoupança',
+                          value: fmt.format(mSavings),
+                          percent: (state.config.savingsPercent * 100).round(),
+                          color: const Color(0xFF9C27B0),
+                        )),
+                        const SizedBox(width: 8),
+                        Expanded(child: _StudioCofrinhoCard(
+                          icon: Icons.account_balance_wallet_rounded,
+                          label: 'Pró-labore',
+                          value: fmt.format(mProlabore),
+                          percent: (state.config.availablePercent * 100).round(),
+                          color: _studioRose,
+                        )),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
 
             // Botões de ação (só no mês atual)
             if (_isCurrentMonth)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showAddEntry(context, 'revenue'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          decoration: BoxDecoration(
-                            color: _studioRose.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _studioRose.withOpacity(0.35)),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_rounded, color: _studioRose, size: 18),
-                              SizedBox(width: 6),
-                              Text('Faturamento', style: TextStyle(color: _studioRose, fontSize: 13, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showAddEntry(context, 'expense'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.danger.withOpacity(0.3)),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.remove_rounded, color: AppColors.danger, size: 18),
-                              SizedBox(width: 6),
-                              Text('Gasto', style: TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w600)),
-                            ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _showAddEntry(context, 'revenue'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            decoration: BoxDecoration(
+                              color: _studioRose.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _studioRose.withOpacity(0.35)),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_rounded, color: _studioRose, size: 18),
+                                SizedBox(width: 6),
+                                Text('Faturamento', style: TextStyle(color: _studioRose, fontSize: 13, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _showAddEntry(context, 'expense'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.remove_rounded, color: AppColors.danger, size: 18),
+                                SizedBox(width: 6),
+                                Text('Gasto', style: TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
             // Tabs
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
-                ),
-                child: TabBar(
-                  controller: _tab,
-                  indicator: BoxDecoration(
-                    color: _studioRose.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.surfaceBorder, width: 0.5),
                   ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  dividerColor: Colors.transparent,
-                  labelColor: _studioRose,
-                  unselectedLabelColor: AppColors.textMuted,
-                  labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                  tabs: const [
-                    Tab(text: 'Todos'),
-                    Tab(text: 'Faturamento'),
-                    Tab(text: 'Gastos'),
-                    Tab(text: 'Fixas'),
-                    Tab(text: 'Histórico'),
-                  ],
+                  child: TabBar(
+                    controller: _tab,
+                    indicator: BoxDecoration(
+                      color: _studioRose.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    labelColor: _studioRose,
+                    unselectedLabelColor: AppColors.textMuted,
+                    labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    tabs: const [
+                      Tab(text: 'Todos'),
+                      Tab(text: 'Faturamento'),
+                      Tab(text: 'Gastos'),
+                      Tab(text: 'Fixas'),
+                      Tab(text: 'Histórico'),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-
-            // Lista / Timeline
-            Expanded(
-              child: TabBarView(
-                controller: _tab,
-                children: [
-                  _EntryList(entries: displayEntries, fmt: fmt),
-                  _EntryList(entries: displayEntries.where((e) => e.isRevenue).toList(), fmt: fmt),
-                  _EntryList(entries: displayEntries.where((e) => e.isExpense).toList(), fmt: fmt),
-                  const _StudioFixedTab(),
-                  _TimelineTab(allEntries: state.entries, config: state.config, fmt: fmt),
-                ],
               ),
             ),
           ],
+          body: TabBarView(
+            controller: _tab,
+            children: [
+              _EntryList(entries: displayEntries, fmt: fmt),
+              _EntryList(entries: displayEntries.where((e) => e.isRevenue).toList(), fmt: fmt),
+              _EntryList(entries: displayEntries.where((e) => e.isExpense).toList(), fmt: fmt),
+              const _StudioFixedTab(),
+              _TimelineTab(allEntries: state.entries, config: state.config, fmt: fmt),
+            ],
+          ),
         ),
       ),
     );
