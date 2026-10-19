@@ -9,6 +9,11 @@ import '../models/studio_entry.dart';
 import '../models/studio_config.dart';
 import '../models/fixed_expense.dart';
 import '../logic/money.dart';
+import '../models/transaction.dart';
+import '../models/payment_card.dart';
+import '../providers/finance_provider.dart';
+import '../providers/payment_card_provider.dart';
+import '../widgets/payment_method_selector.dart';
 
 const _studioRose = Color(0xFFD4548A);
 const _studioBg = Color(0xFF1A0D14);
@@ -472,6 +477,9 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
     String? selectedCategory = isRevenue ? null : _expenseCategories.first;
     DateTime selectedDate = DateTime.now();
     final cfgFmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    PaymentMethod? paymentMethod;
+    PaymentCard? selectedCard;
+    int installments = 1;
 
     showModalBottomSheet(
       context: context,
@@ -486,6 +494,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
               ? 'Hoje, ${DateFormat('dd/MM', 'pt_BR').format(selectedDate)}'
               : DateFormat("EEE, dd/MM", 'pt_BR').format(selectedDate);
           final entryColor = isRevenue ? _studioRose : AppColors.danger;
+          final cards = ref.read(paymentCardProvider).cards;
 
           // cofrinhos preview para receita
           final cfg = ref.read(studioProvider).config;
@@ -628,6 +637,20 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
                     ),
                   ],
 
+                  // Despesa: forma de pagamento e cartão
+                  if (!isRevenue) ...[
+                    const SizedBox(height: 16),
+                    PaymentMethodSelector(
+                      selectedMethod: paymentMethod,
+                      selectedCard: selectedCard,
+                      cards: cards,
+                      installments: installments,
+                      onMethodChanged: (m) => setState(() { paymentMethod = m; if (m != PaymentMethod.credit) { selectedCard = null; installments = 1; } }),
+                      onCardChanged: (c) => setState(() => selectedCard = c),
+                      onInstallmentsChanged: (v) => setState(() => installments = v),
+                    ),
+                  ],
+
                   // Despesa: categorias
                   if (!isRevenue) ...[
                     const SizedBox(height: 12),
@@ -672,23 +695,65 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: (isRevenue ? amount <= 0 : (amount <= 0 || descCtrl.text.trim().isEmpty)) ? null : () {
-                      ref.read(studioProvider.notifier).addEntry(
-                        amount: amount,
-                        type: type,
-                        description: isRevenue
+                      final count = installments < 1 ? 1 : installments;
+                      final groupId = count > 1 ? const Uuid().v4() : null;
+                      final parts = splitInstallments(amount, count);
+                      final now = selectedDate;
+
+                      for (int i = 0; i < count; i++) {
+                        final partDate = addMonthsClamped(now, i);
+                        final desc = isRevenue
                             ? 'Faturamento — ${DateFormat('dd/MM', 'pt_BR').format(selectedDate)}'
-                            : descCtrl.text.trim(),
-                        category: isRevenue ? null : selectedCategory,
-                        notes: notesCtrl.text.isEmpty ? null : notesCtrl.text,
-                        date: selectedDate,
-                      );
+                            : count > 1
+                                ? '${descCtrl.text.trim()} (${i + 1}/$count)'
+                                : descCtrl.text.trim();
+
+                        ref.read(studioProvider.notifier).addEntry(
+                          amount: parts[i],
+                          type: type,
+                          description: desc,
+                          category: isRevenue ? null : selectedCategory,
+                          notes: notesCtrl.text.isEmpty ? null : notesCtrl.text,
+                          date: partDate,
+                          paymentMethod: paymentMethod,
+                          cardId: selectedCard?.id,
+                          installments: count,
+                          installmentNumber: i + 1,
+                          installmentGroupId: groupId,
+                        );
+
+                        // Cria Transaction correspondente no Finanças para aparecer na fatura do cartão
+                        if (!isRevenue && selectedCard != null) {
+                          ref.read(financeProvider.notifier).addTransaction(
+                            Transaction(
+                              id: const Uuid().v4(),
+                              description: '[Studio] $desc',
+                              amount: parts[i],
+                              type: TransactionType.expense,
+                              date: partDate,
+                              paymentMethod: paymentMethod,
+                              cardId: selectedCard?.id,
+                              installments: count,
+                              installmentNumber: i + 1,
+                              installmentGroupId: groupId,
+                            ),
+                          );
+                        }
+                      }
                       Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
                       backgroundColor: isRevenue ? _studioRose : AppColors.danger,
                     ),
-                    child: Text(isRevenue ? 'Registrar faturamento' : 'Registrar gasto', style: const TextStyle(fontSize: 15)),
+                    child: Text(
+                      isRevenue
+                          ? 'Registrar faturamento'
+                          : installments > 1
+                              ? 'Registrar gasto ($installments parcelas)'
+                              : 'Registrar gasto',
+                      style: const TextStyle(fontSize: 15),
+                    ),
                   ),
                 ],
               ),

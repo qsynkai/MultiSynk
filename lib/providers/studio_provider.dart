@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/studio_entry.dart';
 import '../models/studio_config.dart';
+import '../models/transaction.dart' show PaymentMethod;
 
 class StudioState {
   final List<StudioEntry> entries;
@@ -113,6 +114,11 @@ class StudioNotifier extends StateNotifier<StudioState> {
     String? category,
     DateTime? date,
     String? notes,
+    PaymentMethod? paymentMethod,
+    String? cardId,
+    int installments = 1,
+    int installmentNumber = 1,
+    String? installmentGroupId,
   }) async {
     final entry = StudioEntry(
       id: id ?? const Uuid().v4(),
@@ -122,6 +128,11 @@ class StudioNotifier extends StateNotifier<StudioState> {
       category: category,
       date: date ?? DateTime.now(),
       notes: notes,
+      paymentMethod: paymentMethod,
+      cardId: cardId,
+      installments: installments,
+      installmentNumber: installmentNumber,
+      installmentGroupId: installmentGroupId,
     );
     await DatabaseHelper.instance.insertStudioEntry(entry);
     await load();
