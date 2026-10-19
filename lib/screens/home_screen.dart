@@ -325,6 +325,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
+            // Resumo visual rápido
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                child: _FinancialPulseCard(
+                  monthIncome: combinedMonthIncome,
+                  monthExpenses: combinedMonthExpenses,
+                  pendingFixed: pendingFixed,
+                  cardTotal: cardState.cards.fold(0.0, (s, c) => s + cardCycleTotal(c, finance.transactions)),
+                  weeklyBudget: combinedWeeklyBudget,
+                  receivables: finance.pendingReceivables,
+                  fmt: fmt,
+                ),
+              ),
+            ),
+
             // Banner Fiorino — entrada do dia
             SliverToBoxAdapter(
               child: Padding(
@@ -1178,6 +1194,172 @@ class _AiAnalysisSheetState extends State<_AiAnalysisSheet> {
                     ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinancialPulseCard extends StatelessWidget {
+  final double monthIncome;
+  final double monthExpenses;
+  final double pendingFixed;
+  final double cardTotal;
+  final double weeklyBudget;
+  final double receivables;
+  final NumberFormat fmt;
+
+  const _FinancialPulseCard({
+    required this.monthIncome,
+    required this.monthExpenses,
+    required this.pendingFixed,
+    required this.cardTotal,
+    required this.weeklyBudget,
+    required this.receivables,
+    required this.fmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final totalOwed = pendingFixed + cardTotal;
+    final spent = monthExpenses;
+    final available = monthIncome - spent - pendingFixed;
+    final progress = monthIncome > 0 ? (spent / monthIncome).clamp(0.0, 1.0) : 0.0;
+
+    final Color statusColor;
+    final IconData statusIcon;
+    final String statusText;
+
+    if (available <= 0) {
+      statusColor = AppColors.danger;
+      statusIcon = Icons.warning_rounded;
+      statusText = 'Orçamento estourado! Corte gastos ou aguarde receitas.';
+    } else if (progress > 0.8) {
+      statusColor = AppColors.warning;
+      statusIcon = Icons.info_rounded;
+      statusText = 'Atenção: já usou ${(progress * 100).toInt()}% da renda. Restam ${fmt.format(available)} livres.';
+    } else if (totalOwed > 0) {
+      statusText = 'Falta pagar ${fmt.format(totalOwed)} em contas. Sobram ${fmt.format(available)} livres.';
+      statusColor = AppColors.accent;
+      statusIcon = Icons.account_balance_wallet_rounded;
+    } else {
+      statusColor = AppColors.success;
+      statusIcon = Icons.check_circle_rounded;
+      statusText = 'Tudo em dia! ${fmt.format(available)} disponíveis este mês.';
+    }
+
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final dayProgress = now.day / daysInMonth;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withOpacity(0.3), width: 0.8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, color: statusColor, size: 20),
+              const SizedBox(width: 8),
+              const Text('Pulso financeiro', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Dia ${now.day}/$daysInMonth',
+                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Text('Gasto', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              const Spacer(),
+              Text('${(progress * 100).toInt()}%', style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final barWidth = constraints.maxWidth;
+              return Stack(
+                children: [
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: dayProgress * barWidth,
+                    top: 0,
+                    child: Container(
+                      width: 2, height: 8,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _PulseStat(label: 'A pagar', value: fmt.format(totalOwed), color: totalOwed > 0 ? AppColors.warning : AppColors.textMuted),
+              Container(width: 0.5, height: 28, color: AppColors.surfaceBorder),
+              _PulseStat(label: 'Faturas', value: fmt.format(cardTotal), color: cardTotal > 0 ? AppColors.danger : AppColors.textMuted),
+              Container(width: 0.5, height: 28, color: AppColors.surfaceBorder),
+              _PulseStat(label: 'Livre', value: fmt.format(available.clamp(0, double.infinity)), color: available > 0 ? AppColors.success : AppColors.danger),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            statusText,
+            style: TextStyle(color: statusColor.withOpacity(0.85), fontSize: 12, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _PulseStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+          const SizedBox(height: 3),
+          Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
         ],
       ),
     );
